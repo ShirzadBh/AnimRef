@@ -20,3 +20,5 @@
 | JPEG | Joint Photographic Experts Group |
 | PNG | Portable Network Graphics |
 ---
+>installation: 
+	Copy the contents inside "the 3Ds Max 20XX" and paste them in "//3ds Max 2021//scripts//Startup".
