@@ -36,4 +36,4 @@ With AnimRef you can load and play image sequences directly in the 3Ds Max user-
 	
 >Supported Version:
 
-    2018 - 2019 - 2020 - 2022
+    2018 - 2019 - 2020 - 2021 - 2022
