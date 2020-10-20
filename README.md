@@ -32,3 +32,6 @@ With AnimRef you can load and play image sequences directly in the 3Ds Max user-
 >How To Run: 
 	Now, it's a MacroScript, which you can assign a shortcut to it or search it using "X" in 3Ds Max.
 	
+>Supported Version:
+
+    2018 - 2019 - 2020 - 2022
