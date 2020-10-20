@@ -1,16 +1,21 @@
-## AnimRef v1.0 - Sequence Loader For 3Ds Max
+## AnimRef v1.1.3 - Sequence Loader For 3Ds Max
 
 
 ![AnimRef v1.0 User-Interface](img/interface.jpg)
 
 ---
->With AnimRef you can load and play image sequences directly in the 3Ds Max user-interface. There are a few parameters to keep it simple and fast for animators:
+With AnimRef you can load and play image sequences directly in the 3Ds Max user-interface. There are a few parameters to keep it simple and fast for animators:
 
-### AnimRef v1.0
-- Load image Sequences in the desired range
-- Time Shift value
-- 3Ds Max Synced Time Slider
-- Window Opacity Slider
+### AnimRef v1.1.3
+- New UI design
+- Add timer to messageBox
+- 3 bug fixes
+
+### AnimRef v1.0.0
+- Load image sequences in the desired range
+- Time shift value
+- 3Ds Max synced time slider
+- Window opacity slider
 ---
 
 | Supported Formats | Description |
@@ -21,4 +26,8 @@
 | PNG | Portable Network Graphics |
 ---
 >installation: 
-	Copy the contents inside "the 3Ds Max 20XX" and paste them in "//3ds Max 2021//scripts//Startup".
+	Unzip the "AnimRef.rar" inside "the 3Ds Max 20XX//ApplicationPlugins".
+	
+>How To Run: 
+	Now, it's a MacroScript, which you can assign a shortcut to it or search it using "X" in 3Ds Max.
+	
