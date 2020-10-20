@@ -24,7 +24,8 @@ With AnimRef you can load and play image sequences directly in the 3Ds Max user-
 | JPG | Joint Photographic Experts Group |
 | JPEG | Joint Photographic Experts Group |
 | PNG | Portable Network Graphics |
----
+
+
 >installation: 
 	Unzip the "AnimRef.zip" inside "the 3Ds Max 20XX//ApplicationPlugins".
 	
