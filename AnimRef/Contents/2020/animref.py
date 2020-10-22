@@ -181,6 +181,7 @@ class AnimRef(QDialog):
                                                                                          QtCore.Qt.KeepAspectRatio,
                                                                                          QtCore.Qt.FastTransformation)
                 self.ui.viewer.setPixmap(self.pixmap)
+                self.ui.viewer.repaint()
                 self.ui.maxframe.setText(str(int(mxs.currentTime)))
                 self.ui.refframe.setText(str(int(mxs.currentTime) - self.time_shift))
                 self.out_of_range = False
