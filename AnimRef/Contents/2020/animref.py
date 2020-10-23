@@ -26,6 +26,7 @@ class AnimRef(QDialog):
         self.defineIcons()
         self.start()
 
+        self.setWindowIcon(self.icon)
         self.timer = QtCore.QTimer(self)
 
     def startTime(self):
@@ -41,7 +42,8 @@ class AnimRef(QDialog):
     def init(self):
 
         self.dir = mxs.getDir(mxs.name('maxRoot'))
-        ui_file = QFile(os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'interface', 'interface.ui'))
+        ui_file = QFile(
+            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'interface', 'interface.ui'))
         ui_file.open(QFile.ReadOnly)
         self.ui = QUiLoader().load(ui_file, self)
         ui_file.close()
@@ -202,7 +204,8 @@ class AnimRef(QDialog):
                 self.out_of_range = True
 
     def defineIcons(self):
-
+        self.icon = QtGui.QIcon(
+            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'icon.png'))
         self.play_icon = QtGui.QIcon(
             os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'play.png'))
         self.n_frame_icon = QtGui.QIcon(
@@ -245,7 +248,8 @@ class AnimRef(QDialog):
             self.height = self.ui.viewer.height()
             self.width = self.ui.viewer.width()
 
-            self.pixmap = self.images[self.last_valid_frame].scaled(self.width, self.height, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
+            self.pixmap = self.images[self.last_valid_frame].scaled(self.width, self.height, QtCore.Qt.KeepAspectRatio,
+                                                                    QtCore.Qt.FastTransformation)
             self.ui.viewer.setPixmap(self.pixmap)
 
     def status_1(self):

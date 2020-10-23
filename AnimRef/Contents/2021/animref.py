@@ -23,6 +23,8 @@ class AnimRef(QDialog):
         self.defineIcons()
         self.start()
 
+        self.setWindowIcon(self.icon)
+
         self.timer = QtCore.QTimer(self)
 
     def startTime(self):
@@ -201,6 +203,8 @@ class AnimRef(QDialog):
                 self.out_of_range = True
 
     def defineIcons(self):
+        self.icon = QtGui.QIcon(
+            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'icon.png'))
         self.play_icon = QtGui.QIcon(
             os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'play.png'))
         self.n_frame_icon = QtGui.QIcon(
