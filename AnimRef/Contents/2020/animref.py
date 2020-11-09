@@ -1,4 +1,6 @@
 import os
+import subprocess
+import urllib
 
 import MaxPlus
 from PySide2 import QtCore, QtGui
@@ -6,7 +8,7 @@ from PySide2 import QtWidgets
 from PySide2.QtCore import QFile
 from PySide2.QtGui import QIcon, QColor
 from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel
+from PySide2.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel
 from pymxs import runtime as mxs
 
 
@@ -19,7 +21,7 @@ class AnimRef(QDialog):
 
         self.setWindowFlags(QtCore.Qt.WindowType.Window)
         self.resize(720, 460)
-        self.setWindowTitle("AnimRef v1.2.0")
+        self.setWindowTitle("AnimRef v1.3.0")
 
         self.defineVariables()
         self.defineSignals()
@@ -28,6 +30,51 @@ class AnimRef(QDialog):
 
         self.setWindowIcon(self.icon)
         self.timer = QtCore.QTimer(self)
+
+    def downloadConverter(self):
+
+        converter_path = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
+        download_path = "http://dl.cgcenter.ir/dl/tools/animref/video_to_sequence.exe"
+
+        try:
+
+            # urllib.request.urlretrieve(download_path, converter_path)
+            urllib.urlretrieve(download_path, converter_path)
+
+            self.ui.state.setStyleSheet('''color : #98fc03;
+                font-size: 12px;
+                font-family:"Comic Sans MS", cursive, sans-serif;''')
+
+            self.ui.state.setText("video_to_sequence.exe is ready!")
+            self.time_counting = True
+            self.startTime()
+        except:
+            self.ui.state.setStyleSheet('''color : #fc5203;
+                font-size: 12px;
+                font-family:"Comic Sans MS", cursive, sans-serif;''')
+
+            self.ui.state.setText("Download failed...")
+            self.time_counting = True
+            self.startTime()
+
+    def convertedExist(self):
+
+        FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
+        path = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
+        converterPath = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter')
+
+        if os.path.exists(path):
+            subprocess.call([FILEBROWSER_PATH, converterPath])
+        else:
+            msgBox = QMessageBox()
+            msgBox.setText("Do You Want To Download video_to_sequence.exe")
+            msgBox.setWindowTitle("Sequence Converter")
+            msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
+            returnValue = msgBox.exec_()
+
+            if returnValue == QMessageBox.Ok:
+                self.downloadConverter()
 
     def startTime(self):
         if self.time_counting:
@@ -84,6 +131,8 @@ class AnimRef(QDialog):
 
     def defineSignals(self):
         # self.ui.timeSlider.valueChanged.connect(self.goToFrame)
+        self.ui.btn_converter.clicked.connect(self.convertedExist)
+
         self.ui.sl_opacity.valueChanged.connect(self.changeOpacity)
         self.ui.btn_load_seq.clicked.connect(self.load_seq)
         self.ui.sb_time_shift.valueChanged.connect(self.updateTimeShift)
@@ -222,6 +271,8 @@ class AnimRef(QDialog):
             os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'loop.png'))
         self.pause_icon = QtGui.QIcon(
             os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'pause.png'))
+        self.seq_icon = QtGui.QIcon(
+            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'seq.png'))
 
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_n_frame.setIcon(self.n_frame_icon)
@@ -230,6 +281,7 @@ class AnimRef(QDialog):
         self.ui.btn_e_frame.setIcon(self.e_frame_icon)
         self.ui.btn_load_seq.setIcon(self.load_images_icon)
         self.ui.btn_loop.setIcon(self.loop_icon)
+        self.ui.btn_converter.setIcon(self.seq_icon)
 
     def wheelEvent(self, event):
         if self.isLoaded:
