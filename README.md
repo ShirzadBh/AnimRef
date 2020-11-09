@@ -1,4 +1,4 @@
-## AnimRef v1.2.0 - Sequence Loader For 3Ds Max
+## AnimRef v1.3.0 - Sequence Loader For 3Ds Max
 
 
 ![AnimRef v1.0 User-Interface](screen/interface.jpg)
