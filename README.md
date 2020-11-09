@@ -8,6 +8,10 @@
 With AnimRef you can load and play image sequences directly in the 3Ds Max user-interface. There are a few parameters to keep it simple and fast for animators:
 
 ---
+### AnimRef v1.3.0
+- Video to Sequence Converter:
+![](screen/converter.gif)
+
 ### AnimRef v1.2.0
 - Immediate Viewer Update  
 
