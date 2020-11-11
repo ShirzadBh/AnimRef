@@ -33,7 +33,7 @@ class AnimRef(QDialog):
 
         converter_path = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter',
                                       'video_to_sequence.exe')
-        download_path = "http://dl.cgcenter.ir/dl/tools/animref/video_to_sequence.exe"
+        download_path = "https://raw.githubusercontent.com/ShirzadBh/AnimRef/main/AnimRef/Contents/converter/video_to_sequence.exe"
 
         try:
             urllib.request.urlretrieve(download_path, converter_path)
