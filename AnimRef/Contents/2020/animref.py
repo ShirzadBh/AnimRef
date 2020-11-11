@@ -33,7 +33,7 @@ class AnimRef(QDialog):
 
     def downloadConverter(self):
 
-        converter_path = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
+        converter_path = os.path.join(self.dir,  'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
         download_path = "http://dl.cgcenter.ir/dl/tools/animref/video_to_sequence.exe"
 
         try:
@@ -60,8 +60,8 @@ class AnimRef(QDialog):
     def convertedExist(self):
 
         FILEBROWSER_PATH = os.path.join(os.getenv('WINDIR'), 'explorer.exe')
-        path = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
-        converterPath = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter')
+        path = os.path.join(self.dir,  'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
+        converterPath = os.path.join(self.dir,  'AnimRef', 'Contents', 'converter')
 
         if os.path.exists(path):
             subprocess.call([FILEBROWSER_PATH, converterPath])
@@ -88,9 +88,9 @@ class AnimRef(QDialog):
 
     def init(self):
 
-        self.dir = mxs.getDir(mxs.name('maxRoot'))
+        self.dir = mxs.getDir(mxs.name('publicExchangeStoreInstallPath'))
         ui_file = QFile(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'interface', 'interface.ui'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'interface', 'interface.ui'))
         ui_file.open(QFile.ReadOnly)
         self.ui = QUiLoader().load(ui_file, self)
         ui_file.close()
@@ -127,7 +127,7 @@ class AnimRef(QDialog):
         self.last_frame = 0
         self.previous_frame = 0
         self.no_image = QtGui.QPixmap(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'no_data.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'no_data.png'))
 
     def defineSignals(self):
         # self.ui.timeSlider.valueChanged.connect(self.goToFrame)
@@ -254,25 +254,25 @@ class AnimRef(QDialog):
 
     def defineIcons(self):
         self.icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'icon.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'icon.png'))
         self.play_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'play.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'play.png'))
         self.n_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'n_frame.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'n_frame.png'))
         self.p_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'p_frame.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'p_frame.png'))
         self.s_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 's_frame.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 's_frame.png'))
         self.e_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'e_frame.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'e_frame.png'))
         self.load_images_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'load_images.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'load_images.png'))
         self.loop_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'loop.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'loop.png'))
         self.pause_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'pause.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'pause.png'))
         self.seq_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'icons', 'seq.png'))
+            os.path.join(self.dir,  'AnimRef', 'Contents', 'icons', 'seq.png'))
 
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_n_frame.setIcon(self.n_frame_icon)
