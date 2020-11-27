@@ -35,8 +35,12 @@ With AnimRef you can load and play image sequences directly in the 3Ds Max user-
 | PNG | Portable Network Graphics |
 
 
+>Easy installation: 
+	Run "One-Click Installation.bat".
+	
 >installation: 
-	Unzip the "AnimRef.zip" inside C://ProgramData//Autodesk//ApplicationPlugins".
+	Unzip the "AnimRef.zip" inside "C://ProgramData//Autodesk//ApplicationPlugins".
+
 	
 >How To Run: 
 	Now, it's a MacroScript, which you can assign a shortcut to it or search it using "X" in 3Ds Max.
