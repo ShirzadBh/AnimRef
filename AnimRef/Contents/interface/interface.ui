@@ -229,9 +229,15 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
+
+
+QPushButton::checked 
+{
+background-color: #E84A5F;
+}
 
 
 
@@ -279,9 +285,15 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
+
+
+QPushButton::checked 
+{
+background-color: #E84A5F;
+}
 
 
 
@@ -329,7 +341,7 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
 
@@ -338,7 +350,6 @@ QPushButton::checked
 {
 background-color: #E84A5F;
 }
-
 
 
 
@@ -389,9 +400,15 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
+
+
+QPushButton::checked 
+{
+background-color: #E84A5F;
+}
 
 
 
@@ -439,9 +456,15 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
+
+
+QPushButton::checked 
+{
+background-color: #E84A5F;
+}
 
 
 
@@ -489,14 +512,14 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #424242;
 }
 
 
 
 QPushButton::checked 
 {
-background-color: #E84A5F;
+background-color:#333333;
 }
 
 
@@ -737,14 +760,20 @@ background-color: #5b5b5b;
 
 QPushButton::hover 
 {
-background-color: #E84A5F;
+background-color: #888888;
 }
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
+
+
+QPushButton::checked 
+{
+background-color: #E84A5F;
+}
 
 
 
@@ -792,7 +821,7 @@ background-color: #888888;
 
 QPushButton::pressed 
 {
-background-color: #E84A5F;
+background-color: #4b4b4b;
 }
 
 
