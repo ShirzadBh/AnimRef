@@ -5,17 +5,17 @@
     ProductType="Application"
     Name="AnimRef"
 	Description="Sequence Player For 3Ds Max"
-    AppVersion="1.2.0"
+    AppVersion="1.4.0"
 	Author="Sherzad Bahrami"
-    ProductCode="{8619737e-9a5b-41e6-91c8-7d56c3595345}"
-    UpgradeCode="{dd8ad9f8-7f13-4927-ae15-0e5b9b54aa34}">
+    ProductCode="{79A24A20-FE5C-45FB-8E3F-6F70DEBF5F21}"
+    UpgradeCode="{1200A299-F054-48B8-B170-AC1463D64858}">
     <CompanyDetails Email="cgcenter.org@gmail.com" Name="CGcenter" Url="https://www.cgcenter.ir" />
     <Components Description="post-start-up scripts parts">
         <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2021" SeriesMax="2022" />
-        <ComponentEntry AppName="AnimRef" Version="1.1.3" ModuleName="./Contents/2021.ms" />
+        <ComponentEntry AppName="AnimRef" Version="1.4.0" ModuleName="./Contents/2021.ms" />
     </Components>
     <Components Description="post-start-up scripts parts">
         <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2018" SeriesMax="2020" />
-        <ComponentEntry AppName="AnimRef" Version="1.1.3" ModuleName="./Contents/2020.ms" />
+        <ComponentEntry AppName="AnimRef" Version="1.4.0" ModuleName="./Contents/2020.ms" />
     </Components>
 </ApplicationPackage>
