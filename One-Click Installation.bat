@@ -7,10 +7,10 @@ set websiteAddress=www.cgcenter.ir
 set minVersion=2018
 set maxVersion=2022
 
-set productVer=1.3.0
+set productVer=1.3.1
 
 set releaseDate=2020-10-17
-set lastUpdate=2020-11-27
+set lastUpdate=2021-09-25
 
 set fileName=AnimRef.zip
 set installationPath=/Autodesk/ApplicationPlugins
