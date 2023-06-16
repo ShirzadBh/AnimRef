@@ -11,7 +11,7 @@
     UpgradeCode="{1200A299-F054-48B8-B170-AC1463D64858}">
     <CompanyDetails Email="cgcenter.org@gmail.com" Name="CGcenter" Url="https://www.cgcenter.ir" />
     <Components Description="post-start-up scripts parts">
-        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2021" SeriesMax="2023" />
+        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2021" SeriesMax="2024" />
         <ComponentEntry AppName="AnimRef" Version="1.5.0" ModuleName="./Contents/2021.ms" />
     </Components>
     <Components Description="post-start-up scripts parts">
