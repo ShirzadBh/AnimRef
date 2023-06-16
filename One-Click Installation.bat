@@ -5,12 +5,12 @@ set developerName=Shirzad Bahrami
 set websiteAddress=www.cgcenter.ir
 
 set minVersion=2018
-set maxVersion=2022
+set maxVersion=2024
 
-set productVer=1.3.1
+set productVer=1.5.1
 
 set releaseDate=2020-10-17
-set lastUpdate=2021-09-25
+set lastUpdate=2023-06-16
 
 set fileName=AnimRef.zip
 set installationPath=/Autodesk/ApplicationPlugins
