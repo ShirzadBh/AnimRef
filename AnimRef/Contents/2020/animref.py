@@ -21,7 +21,7 @@ class AnimRef(QDialog):
 
         self.setWindowFlags(QtCore.Qt.WindowType.Window)
         self.resize(720, 460)
-        self.setWindowTitle("AnimRef v1.5.0")
+        self.setWindowTitle("AnimRef v1.5.1")
 
         self.defineVariables()
         self.defineSignals()
