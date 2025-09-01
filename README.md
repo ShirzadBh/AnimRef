@@ -1,7 +1,7 @@
 ## AnimRef - Sequence Loader For 3Ds Max
 
 
-![AnimRef v1.0 User-Interface](screen/interface.jpg)
+![AnimRef User-Interface](screen/interface.jpg)
 
 ---
 
@@ -40,4 +40,4 @@ With AnimRef you can load and play image sequences directly in the 3Ds Max user-
 	
 >Supported Version:
 
-    2018 - 2019 - 2020 - 2021 - 2022 - 2023 - 2024 - 2025
+    2018 - 2027
