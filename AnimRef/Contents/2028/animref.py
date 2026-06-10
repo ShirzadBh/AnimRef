@@ -6,7 +6,7 @@ from PySide6 import QtCore, QtGui
 from PySide6.QtCore import QFile
 from PySide6.QtGui import QIcon, QColor, QPainter
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel
+from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel, QColorDialog
 from pymxs import runtime as mxs
 
 
@@ -103,7 +103,7 @@ class AnimRef(QDialog):
 
     def start(self):
         self.ui.viewer.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
-        self.ui.viewer.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
+        self.ui.viewer.setAlignment(QtCore.Qt.AlignCenter)
         self.pixmap = self.no_image.scaled(400, 200, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
         self.ui.viewer.setPixmap(self.pixmap)
         mxs.registerTimeCallback(self.changeTime)
@@ -112,16 +112,24 @@ class AnimRef(QDialog):
         self.opacity = self.ui.sl_opacity.value() / 100
         self.setWindowOpacity(self.opacity)
 
+    def _updateBrushColorButton(self, color):
+        self.ui.btn_brush_color.setStyleSheet(
+            f"QPushButton {{ background-color: {color.name()}; border: none; }}"
+            f"QPushButton::hover {{ background-color: {color.darker(120).name()}; }}"
+        )
+
     def pickBrushColor(self):
-        color = QtGui.QColorDialog.getColor(self.brush_color, self)
+        self.raise_()
+        self.activateWindow()
+        color = QColorDialog.getColor(self.brush_color, self, "Pick Brush Color")
         if color.isValid():
             self.brush_color = color
-            self.ui.btn_brush_color_7.setStyleSheet(f"background-color: {color.name()}")
+            self._updateBrushColorButton(color)
 
     def changeBrushSize(self):
-        size_slider = getattr(self.ui, 'sl_brush_size_2', None)
+        size_slider = getattr(self.ui, 'sl_brush_size', None)
         if size_slider is None:
-            size_slider = getattr(self.ui, 'btn_brush_color_6', None)
+            size_slider = getattr(self.ui, 'btn_brush_color', None)
         if size_slider is not None:
             self.brush_size = size_slider.value()
 
@@ -147,12 +155,16 @@ class AnimRef(QDialog):
         self.no_image = QtGui.QPixmap(
             os.path.join(os.path.dirname(os.path.realpath(__file__)) + "\\icons\\no_data.png"))
         self.drawing = False
+        self._tablet_drawing = False
         self.last_draw_pos = None
         self._draw_frame = None
         self._overlay_ratio = 1.0
         self._min_draw_dist = 2
         self._draw_buffer = []
         self._draw_flush_timer = None
+        self._undo_stacks = {}
+        self._redo_stacks = {}
+        self._max_undo = 20
         self.brush_size = 20
         self.brush_color = QtGui.QColor(255, 0, 0, 200)
 
@@ -169,13 +181,19 @@ class AnimRef(QDialog):
         self.ui.btn_s_frame.clicked.connect(self.startFrame)
         self.ui.btn_e_frame.clicked.connect(self.endFrame)
 
-        self.ui.btn_brush_color_7.setEnabled(True)
-        self.ui.btn_brush_color_7.clicked.connect(self.pickBrushColor)
-        size_slider = getattr(self.ui, 'sl_brush_size_2', None)
+        self.ui.btn_brush_color.setEnabled(True)
+        self.ui.btn_brush_color.setCheckable(False)
+        self._updateBrushColorButton(self.brush_color)
+        self.ui.btn_brush_color.clicked.connect(self.pickBrushColor)
+        size_slider = getattr(self.ui, 'sl_brush_size', None)
         if size_slider is None:
-            size_slider = getattr(self.ui, 'btn_brush_color_6', None)
+            size_slider = getattr(self.ui, 'btn_brush_color', None)
         if size_slider is not None:
             size_slider.valueChanged.connect(self.changeBrushSize)
+            self.changeBrushSize()
+
+        self.ui.btn_undo.clicked.connect(self.undo)
+        self.ui.btn_redo.clicked.connect(self.redo)
 
     def nextFrame(self):
         mxs.stopAnimation()
@@ -351,6 +369,8 @@ class AnimRef(QDialog):
 
     def _initOverlays(self):
         self.overlays = {}
+        self._undo_stacks = {}
+        self._redo_stacks = {}
         OVERLAY_MAX = 1024
         ratio = 1.0
         for i in range(self.last_frame):
@@ -363,6 +383,8 @@ class AnimRef(QDialog):
                 h = int(h * ratio)
             self.overlays[i] = QtGui.QPixmap(w, h)
             self.overlays[i].fill(QtCore.Qt.transparent)
+            self._undo_stacks[i] = []
+            self._redo_stacks[i] = []
         self._overlay_ratio = ratio
 
     def _compositeOverlay(self, base_pixmap, frame_index):
@@ -378,6 +400,8 @@ class AnimRef(QDialog):
         return result
 
     def _refreshViewer(self, frame):
+        if frame < 0 or frame >= self.last_frame or frame not in self.images:
+            return
         base = self._getScaledBase(frame)
         self.pixmap = self._compositeOverlay(base, frame)
         self.ui.viewer.setPixmap(self.pixmap)
@@ -385,7 +409,7 @@ class AnimRef(QDialog):
 
     def _batchDrawOnOverlay(self, points):
         frame = self._draw_frame
-        if frame is None or frame < 0 or frame >= self.last_frame:
+        if frame is None or frame < 0 or frame >= self.last_frame or frame not in self.images:
             return
         overlay = self.overlays[frame]
         src = self.images[frame]
@@ -397,47 +421,121 @@ class AnimRef(QDialog):
         scaled_w = int(src_w * scale)
         scaled_h = int(src_h * scale)
         ratio = self._overlay_ratio
+        offset_x = (viewer_w - scaled_w) // 2
+        offset_y = (viewer_h - scaled_h) // 2
 
         def map_pos(pos):
-            if not (0 <= pos.x() <= scaled_w and 0 <= pos.y() <= scaled_h):
+            rx = pos.x() - offset_x
+            ry = pos.y() - offset_y
+            if not (0 <= rx <= scaled_w and 0 <= ry <= scaled_h):
                 return None
-            return QtCore.QPoint(int(pos.x() / scale * ratio), int(pos.y() / scale * ratio))
+            return QtCore.QPoint(int(rx / scale * ratio), int(ry / scale * ratio))
 
         painter = QtGui.QPainter(overlay)
         pen = QtGui.QPen(self.brush_color)
-        pen.setWidth(self.brush_size)
         pen.setCapStyle(QtCore.Qt.RoundCap)
-        painter.setPen(pen)
         for i in range(len(points) - 1):
-            p1 = map_pos(points[i])
-            p2 = map_pos(points[i + 1])
+            pos1, press1 = points[i]
+            pos2, press2 = points[i + 1]
+            p1 = map_pos(pos1)
+            p2 = map_pos(pos2)
             if p1 is not None and p2 is not None:
+                width = max(1, int(self.brush_size * ((press1 + press2) / 2.0)))
+                pen.setWidth(width)
+                painter.setPen(pen)
                 painter.drawLine(p1, p2)
         painter.end()
 
+    def _pushUndoState(self, frame):
+        if frame is None or frame < 0 or frame >= self.last_frame or frame not in self.images:
+            return
+        overlay = self.overlays.get(frame)
+        if overlay is None or overlay.isNull():
+            return
+        stack = self._undo_stacks.get(frame, [])
+        # Don't push duplicate state (same size == likely same content since overlay is drawn on)
+        if stack:
+            last = stack[-1]
+            if last.width() == overlay.width() and last.height() == overlay.height():
+                # Quick pixel-comparison via cacheKey; if equal skip push
+                if last.cacheKey() == overlay.cacheKey():
+                    return
+        stack.append(overlay.copy())
+        if len(stack) > self._max_undo:
+            stack.pop(0)
+        self._redo_stacks[frame] = []
+
     def _flushDrawBuffer(self):
         if len(self._draw_buffer) < 2 or self._draw_frame is None:
+            return
+        if self._draw_frame < 0 or self._draw_frame >= self.last_frame or self._draw_frame not in self.images:
+            self._draw_buffer = []
             return
         self._batchDrawOnOverlay(self._draw_buffer)
         self._refreshViewer(self._draw_frame)
         self._draw_buffer = [self._draw_buffer[-1]]
 
+    def tabletEvent(self, event):
+        # Only handle tablet input on the viewer widget; let buttons/sliders get their own events
+        viewer_pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
+        if not self.ui.viewer.rect().contains(viewer_pos):
+            event.ignore()
+            return
+        if not self.isLoaded:
+            event.ignore()
+            return
+        pressure = event.pressure()
+        etype = event.type()
+        if etype == QtCore.QEvent.Type.TabletPress:
+            self.drawing = True
+            self._tablet_drawing = True
+            self._draw_frame = int(mxs.currentTime) - self.time_shift
+            self._pushUndoState(self._draw_frame)
+            self.last_draw_pos = viewer_pos
+            self._draw_buffer = [(viewer_pos, pressure)]
+            self._draw_flush_timer.start()
+            event.accept()
+        elif etype == QtCore.QEvent.Type.TabletMove:
+            if self.drawing and self._tablet_drawing:
+                self._draw_buffer.append((viewer_pos, pressure))
+                self.last_draw_pos = viewer_pos
+                event.accept()
+        elif etype == QtCore.QEvent.Type.TabletRelease:
+            if self._tablet_drawing:
+                self.drawing = False
+                self._tablet_drawing = False
+                self._draw_flush_timer.stop()
+                if len(self._draw_buffer) >= 2:
+                    self._batchDrawOnOverlay(self._draw_buffer)
+                    self._refreshViewer(self._draw_frame)
+                self._draw_buffer = []
+                self.last_draw_pos = None
+                self._draw_frame = None
+                event.accept()
+
     def mousePressEvent(self, event):
+        if self._tablet_drawing:
+            return
         if event.button() == QtCore.Qt.LeftButton and self.isLoaded:
             self.drawing = True
             self._draw_frame = int(mxs.currentTime) - self.time_shift
+            self._pushUndoState(self._draw_frame)
             pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
             self.last_draw_pos = pos
-            self._draw_buffer = [pos]
+            self._draw_buffer = [(pos, 1.0)]
             self._draw_flush_timer.start()
 
     def mouseMoveEvent(self, event):
+        if self._tablet_drawing:
+            return
         if self.drawing and self.isLoaded:
             pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
-            self._draw_buffer.append(pos)
+            self._draw_buffer.append((pos, 1.0))
             self.last_draw_pos = pos
 
     def mouseReleaseEvent(self, event):
+        if self._tablet_drawing:
+            return
         if event.button() == QtCore.Qt.LeftButton:
             self.drawing = False
             self._draw_flush_timer.stop()
@@ -447,6 +545,32 @@ class AnimRef(QDialog):
             self._draw_buffer = []
             self.last_draw_pos = None
             self._draw_frame = None
+
+    def undo(self):
+        frame = int(mxs.currentTime) - self.time_shift
+        if frame < 0 or frame >= self.last_frame:
+            return
+        stack = self._undo_stacks.get(frame, [])
+        if not stack:
+            return
+        current = self.overlays.get(frame)
+        if current is not None and not current.isNull():
+            self._redo_stacks[frame].append(current.copy())
+        self.overlays[frame] = stack.pop()
+        self._refreshViewer(frame)
+
+    def redo(self):
+        frame = int(mxs.currentTime) - self.time_shift
+        if frame < 0 or frame >= self.last_frame:
+            return
+        stack = self._redo_stacks.get(frame, [])
+        if not stack:
+            return
+        current = self.overlays.get(frame)
+        if current is not None and not current.isNull():
+            self._undo_stacks[frame].append(current.copy())
+        self.overlays[frame] = stack.pop()
+        self._refreshViewer(frame)
 
     def status_1(self):
         self.ui.state.clear()

@@ -680,7 +680,7 @@ font-family:&quot;Comic Sans MS&quot;, cursive, sans-serif;</string>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_9">
          <item>
-          <widget class="QSlider" name="sl_brush_size_2">
+          <widget class="QSlider" name="sl_brush_size">
            <property name="minimumSize">
             <size>
              <width>50</width>
@@ -717,7 +717,7 @@ QSlider::handle:horizontal {
             <number>2</number>
            </property>
            <property name="value">
-            <number>100</number>
+            <number>14</number>
            </property>
            <property name="orientation">
             <enum>Qt::Horizontal</enum>
@@ -725,19 +725,19 @@ QSlider::handle:horizontal {
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="btn_brush_color_7">
+          <widget class="QPushButton" name="btn_brush_color">
            <property name="enabled">
             <bool>false</bool>
            </property>
            <property name="minimumSize">
             <size>
-             <width>0</width>
+             <width>26</width>
              <height>26</height>
             </size>
            </property>
            <property name="maximumSize">
             <size>
-             <width>16777215</width>
+             <width>26</width>
              <height>26</height>
             </size>
            </property>
@@ -779,7 +779,63 @@ background-color:#333333;
             <string/>
            </property>
            <property name="checkable">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_undo">
+           <property name="enabled">
             <bool>true</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>26</width>
+             <height>26</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>26</width>
+             <height>26</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">n</string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>false</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="btn_redo">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>26</width>
+             <height>26</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>26</width>
+             <height>26</height>
+            </size>
+           </property>
+           <property name="styleSheet">
+            <string notr="true"/>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="checkable">
+            <bool>false</bool>
            </property>
           </widget>
          </item>
