@@ -4,10 +4,10 @@ set productName=AnimRef
 set developerName=Shirzad Bahrami
 set websiteAddress=www.shirzadbahrami.com
 
-set minVersion=2018
-set maxVersion=2027
+set minVersion=2028
+set maxVersion=2028
 
-set productVer=1.5.3
+set productVer=2.0
 
 set releaseDate=2020-10-17
 set lastUpdate=2024-09-01

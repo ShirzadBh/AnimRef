@@ -2,11 +2,11 @@ import os
 import subprocess
 import urllib.request
 
-from PySide2 import QtCore, QtGui
-from PySide2.QtCore import QFile
-from PySide2.QtGui import QIcon, QColor
-from PySide2.QtUiTools import QUiLoader
-from PySide2.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel
+from PySide6 import QtCore, QtGui
+from PySide6.QtCore import QFile
+from PySide6.QtGui import QIcon, QColor, QPainter
+from PySide6.QtUiTools import QUiLoader
+from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel
 from pymxs import runtime as mxs
 
 
@@ -17,8 +17,8 @@ class AnimRef(QDialog):
         self.init()
 
         self.setWindowFlags(QtCore.Qt.WindowType.Window)
-        self.resize(720, 460)
-        self.setWindowTitle("AnimRef v1.5.3")
+        self.resize(1024, 720)
+        self.setWindowTitle("AnimRef v2.0")
 
         self.defineVariables()
         self.defineSignals()
@@ -28,6 +28,9 @@ class AnimRef(QDialog):
         self.setWindowIcon(self.icon)
 
         self.timer = QtCore.QTimer(self)
+        self._draw_flush_timer = QtCore.QTimer(self)
+        self._draw_flush_timer.timeout.connect(self._flushDrawBuffer)
+        self._draw_flush_timer.setInterval(16)
 
     def downloadConverter(self):
 
@@ -85,18 +88,22 @@ class AnimRef(QDialog):
 
         self.dir = mxs.getDir(mxs.name('publicExchangeStoreInstallPath'))
         loader = QUiLoader()
-        ui_file_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'interface', 'interface.ui')
+        if DEV:
+            ui_file_path = r"C:\Users\cgcen\Documents\GitHub\AnimRef\AnimRef\Contents\interface\interface.ui"
+        else:
+            ui_file_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'interface', 'interface.ui')
         ui_file = QFile(ui_file_path)
         ui_file.open(QFile.ReadOnly)
         self.ui = loader.load(ui_file, self)
         ui_file.close()
         layout = QVBoxLayout()
         layout.addWidget(self.ui)
-        layout.setMargin(4)
+        layout.setContentsMargins(4, 4, 4, 4)
         self.setLayout(layout)
 
     def start(self):
         self.ui.viewer.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
+        self.ui.viewer.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignTop)
         self.pixmap = self.no_image.scaled(400, 200, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
         self.ui.viewer.setPixmap(self.pixmap)
         mxs.registerTimeCallback(self.changeTime)
@@ -104,6 +111,19 @@ class AnimRef(QDialog):
     def changeOpacity(self):
         self.opacity = self.ui.sl_opacity.value() / 100
         self.setWindowOpacity(self.opacity)
+
+    def pickBrushColor(self):
+        color = QtGui.QColorDialog.getColor(self.brush_color, self)
+        if color.isValid():
+            self.brush_color = color
+            self.ui.btn_brush_color_7.setStyleSheet(f"background-color: {color.name()}")
+
+    def changeBrushSize(self):
+        size_slider = getattr(self.ui, 'sl_brush_size_2', None)
+        if size_slider is None:
+            size_slider = getattr(self.ui, 'btn_brush_color_6', None)
+        if size_slider is not None:
+            self.brush_size = size_slider.value()
 
     def defineVariables(self):
         self.last_valid_frame = 0
@@ -118,12 +138,23 @@ class AnimRef(QDialog):
         self.width = self.ui.viewer.width()
         self.images_backup = {}
         self.images = {}
+        self.overlays = {}
+        self._scaled_bases = {}
         self.opacity = 1
         self.images_path = None
         self.last_frame = 0
         self.previous_frame = 0
         self.no_image = QtGui.QPixmap(
             os.path.join(os.path.dirname(os.path.realpath(__file__)) + "\\icons\\no_data.png"))
+        self.drawing = False
+        self.last_draw_pos = None
+        self._draw_frame = None
+        self._overlay_ratio = 1.0
+        self._min_draw_dist = 2
+        self._draw_buffer = []
+        self._draw_flush_timer = None
+        self.brush_size = 20
+        self.brush_color = QtGui.QColor(255, 0, 0, 200)
 
     def defineSignals(self):
         self.ui.btn_converter.clicked.connect(self.convertedExist)
@@ -137,6 +168,14 @@ class AnimRef(QDialog):
         self.ui.btn_play.clicked.connect(self.playFrame)
         self.ui.btn_s_frame.clicked.connect(self.startFrame)
         self.ui.btn_e_frame.clicked.connect(self.endFrame)
+
+        self.ui.btn_brush_color_7.setEnabled(True)
+        self.ui.btn_brush_color_7.clicked.connect(self.pickBrushColor)
+        size_slider = getattr(self.ui, 'sl_brush_size_2', None)
+        if size_slider is None:
+            size_slider = getattr(self.ui, 'btn_brush_color_6', None)
+        if size_slider is not None:
+            size_slider.valueChanged.connect(self.changeBrushSize)
 
     def nextFrame(self):
         mxs.stopAnimation()
@@ -198,6 +237,8 @@ class AnimRef(QDialog):
                     self.test[i] = fname[0][i]
 
                 self.last_frame = len(fname[0])
+                self._scaled_bases = {}
+                self._initOverlays()
                 self.isLoaded = True
                 self.ui.btn_play.setEnabled(True)
                 self.ui.btn_s_frame.setEnabled(True)
@@ -217,6 +258,13 @@ class AnimRef(QDialog):
             self.status_3()
             self.changeTime()
 
+    def _getScaledBase(self, frame):
+        key = (frame, self.width, self.height)
+        if key not in self._scaled_bases:
+            self._scaled_bases[key] = self.images[frame].scaled(
+                self.width, self.height, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
+        return self._scaled_bases[key]
+
     def changeTime(self):
         if self.isLoaded:
 
@@ -224,9 +272,9 @@ class AnimRef(QDialog):
             self.ui.refframe.setText(str(int(mxs.currentTime) - self.time_shift))
 
             try:
-                self.pixmap = self.images[int(mxs.currentTime) - self.time_shift].scaled(self.width, self.height,
-                                                                                         QtCore.Qt.KeepAspectRatio,
-                                                                                         QtCore.Qt.FastTransformation)
+                frame = int(mxs.currentTime) - self.time_shift
+                base = self._getScaledBase(frame)
+                self.pixmap = self._compositeOverlay(base, frame)
                 self.ui.viewer.setPixmap(self.pixmap)
                 self.ui.viewer.repaint()
                 self.ui.maxframe.setText(str(int(mxs.currentTime)))
@@ -281,9 +329,10 @@ class AnimRef(QDialog):
 
     def wheelEvent(self, event):
         if self.isLoaded:
-            mxs.sliderTime += (event.delta() / 120)
+            mxs.sliderTime += (event.angleDelta().y() / 120)
 
     def resizeEvent(self, event):
+        self._scaled_bases = {}
         self.updateFrame()
         self.changeTime()
 
@@ -296,10 +345,108 @@ class AnimRef(QDialog):
             self.height = self.ui.viewer.height()
             self.width = self.ui.viewer.width()
 
-            self.pixmap = self.images[self.last_valid_frame].scaled(self.width, self.height,
-                                                                    QtCore.Qt.KeepAspectRatio,
-                                                                    QtCore.Qt.FastTransformation)
+            base = self._getScaledBase(self.last_valid_frame)
+            self.pixmap = self._compositeOverlay(base, self.last_valid_frame)
             self.ui.viewer.setPixmap(self.pixmap)
+
+    def _initOverlays(self):
+        self.overlays = {}
+        OVERLAY_MAX = 1024
+        ratio = 1.0
+        for i in range(self.last_frame):
+            src = self.images[i]
+            w, h = src.width(), src.height()
+            max_dim = max(w, h)
+            if max_dim > OVERLAY_MAX:
+                ratio = OVERLAY_MAX / max_dim
+                w = int(w * ratio)
+                h = int(h * ratio)
+            self.overlays[i] = QtGui.QPixmap(w, h)
+            self.overlays[i].fill(QtCore.Qt.transparent)
+        self._overlay_ratio = ratio
+
+    def _compositeOverlay(self, base_pixmap, frame_index):
+        result = QtGui.QPixmap(base_pixmap)
+        overlay = self.overlays.get(frame_index)
+        if overlay and not overlay.isNull():
+            painter = QtGui.QPainter(result)
+            scaled_overlay = overlay.scaled(result.width(), result.height(),
+                                            QtCore.Qt.KeepAspectRatio,
+                                            QtCore.Qt.FastTransformation)
+            painter.drawPixmap(0, 0, scaled_overlay)
+            painter.end()
+        return result
+
+    def _refreshViewer(self, frame):
+        base = self._getScaledBase(frame)
+        self.pixmap = self._compositeOverlay(base, frame)
+        self.ui.viewer.setPixmap(self.pixmap)
+        self.ui.viewer.repaint()
+
+    def _batchDrawOnOverlay(self, points):
+        frame = self._draw_frame
+        if frame is None or frame < 0 or frame >= self.last_frame:
+            return
+        overlay = self.overlays[frame]
+        src = self.images[frame]
+        viewer_w = self.ui.viewer.width()
+        viewer_h = self.ui.viewer.height()
+        src_w = src.width()
+        src_h = src.height()
+        scale = min(viewer_w / src_w, viewer_h / src_h)
+        scaled_w = int(src_w * scale)
+        scaled_h = int(src_h * scale)
+        ratio = self._overlay_ratio
+
+        def map_pos(pos):
+            if not (0 <= pos.x() <= scaled_w and 0 <= pos.y() <= scaled_h):
+                return None
+            return QtCore.QPoint(int(pos.x() / scale * ratio), int(pos.y() / scale * ratio))
+
+        painter = QtGui.QPainter(overlay)
+        pen = QtGui.QPen(self.brush_color)
+        pen.setWidth(self.brush_size)
+        pen.setCapStyle(QtCore.Qt.RoundCap)
+        painter.setPen(pen)
+        for i in range(len(points) - 1):
+            p1 = map_pos(points[i])
+            p2 = map_pos(points[i + 1])
+            if p1 is not None and p2 is not None:
+                painter.drawLine(p1, p2)
+        painter.end()
+
+    def _flushDrawBuffer(self):
+        if len(self._draw_buffer) < 2 or self._draw_frame is None:
+            return
+        self._batchDrawOnOverlay(self._draw_buffer)
+        self._refreshViewer(self._draw_frame)
+        self._draw_buffer = [self._draw_buffer[-1]]
+
+    def mousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton and self.isLoaded:
+            self.drawing = True
+            self._draw_frame = int(mxs.currentTime) - self.time_shift
+            pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
+            self.last_draw_pos = pos
+            self._draw_buffer = [pos]
+            self._draw_flush_timer.start()
+
+    def mouseMoveEvent(self, event):
+        if self.drawing and self.isLoaded:
+            pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
+            self._draw_buffer.append(pos)
+            self.last_draw_pos = pos
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            self.drawing = False
+            self._draw_flush_timer.stop()
+            if len(self._draw_buffer) >= 2:
+                self._batchDrawOnOverlay(self._draw_buffer)
+                self._refreshViewer(self._draw_frame)
+            self._draw_buffer = []
+            self.last_draw_pos = None
+            self._draw_frame = None
 
     def status_1(self):
         self.ui.state.clear()
@@ -332,9 +479,28 @@ class AnimRef(QDialog):
         self.startTime()
 
 
+DEV = True
+
+import __main__
+
 def main():
-    dlg = AnimRef()
-    dlg.show()
+    if DEV:
+        AnimRef().show()
+        return
+    instance = getattr(__main__, '_animref_instance', None)
+    try:
+        if instance is not None:
+            if instance.isVisible():
+                instance.hide()
+            else:
+                instance.show()
+                instance.raise_()
+                instance.activateWindow()
+            return
+    except RuntimeError:
+        pass
+    __main__._animref_instance = AnimRef()
+    __main__._animref_instance.show()
 
 
 if __name__ == '__main__':
