@@ -6,17 +6,143 @@ from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import QFile
 from PySide6.QtGui import QIcon, QColor, QPainter
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel, QColorDialog, QInputDialog
+from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QDockWidget, QMainWindow, QWidget, QLabel, QColorDialog, QInputDialog
 from pymxs import runtime as mxs
 
+try:
+    from qtmax import GetQMaxMainWindow
+except ImportError:
+    GetQMaxMainWindow = None
 
-class AnimRef(QDialog):
-    def __init__(self, parent=QWidget.find(mxs.windows.getMAXHWND())):
+
+def _getMaxMainWindow():
+    if GetQMaxMainWindow is not None:
+        return GetQMaxMainWindow()
+    widget = QWidget.find(mxs.windows.getMAXHWND())
+    while widget is not None and not isinstance(widget, QMainWindow):
+        widget = widget.parentWidget()
+    return widget
+
+
+class NewSequenceDialog(QDialog):
+    RESOLUTION_PRESETS = [
+        ("HD 720 (1280 x 720)", 1280, 720),
+        ("Full HD 1080 (1920 x 1080)", 1920, 1080),
+        ("2K (2048 x 1080)", 2048, 1080),
+        ("UHD 4K (3840 x 2160)", 3840, 2160),
+        ("Square (1024 x 1024)", 1024, 1024),
+        ("Custom...", -1, -1),
+    ]
+
+    def __init__(self, parent=None):
         QDialog.__init__(self, parent)
+        self.setWindowTitle("New Sequence")
+        self.bg_color = QtGui.QColor(255, 255, 255)
+
+        layout = QtWidgets.QFormLayout(self)
+
+        # 1. Background color
+        self.btn_color = QPushButton()
+        self.btn_color.setFixedSize(60, 24)
+        self._updateColorButton()
+        self.btn_color.clicked.connect(self._pickColor)
+        layout.addRow("Background Color:", self.btn_color)
+
+        # 2. Resolution presets
+        self.cb_resolution = QtWidgets.QComboBox()
+        for label, _, _ in self.RESOLUTION_PRESETS:
+            self.cb_resolution.addItem(label)
+        self.cb_resolution.currentIndexChanged.connect(self._onPresetChanged)
+        layout.addRow("Resolution:", self.cb_resolution)
+
+        custom_row = QtWidgets.QHBoxLayout()
+        self.sb_width = QtWidgets.QSpinBox()
+        self.sb_width.setRange(8, 8192)
+        self.sb_width.setValue(1280)
+        self.sb_height = QtWidgets.QSpinBox()
+        self.sb_height.setRange(8, 8192)
+        self.sb_height.setValue(720)
+        custom_row.addWidget(QLabel("W:"))
+        custom_row.addWidget(self.sb_width)
+        custom_row.addWidget(QLabel("H:"))
+        custom_row.addWidget(self.sb_height)
+        layout.addRow("", custom_row)
+
+        # 3. Frame range
+        range_row = QtWidgets.QHBoxLayout()
+        self.sb_start = QtWidgets.QSpinBox()
+        self.sb_start.setRange(-10000000, 10000000)
+        self.sb_start.setValue(0)
+        self.sb_end = QtWidgets.QSpinBox()
+        self.sb_end.setRange(-10000000, 10000000)
+        self.sb_end.setValue(100)
+        range_row.addWidget(QLabel("Start:"))
+        range_row.addWidget(self.sb_start)
+        range_row.addWidget(QLabel("End:"))
+        range_row.addWidget(self.sb_end)
+        layout.addRow("Frame Range:", range_row)
+
+        buttons = QtWidgets.QDialogButtonBox(
+            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addRow(buttons)
+
+        self._onPresetChanged(0)
+
+    def _updateColorButton(self):
+        self.btn_color.setStyleSheet(
+            f"QPushButton {{ background-color: {self.bg_color.name()}; border: 1px solid #3d3d3d; }}")
+
+    def _pickColor(self):
+        color = QColorDialog.getColor(self.bg_color, self, "Pick Background Color")
+        if color.isValid():
+            self.bg_color = color
+            self._updateColorButton()
+
+    def _onPresetChanged(self, index):
+        label, w, h = self.RESOLUTION_PRESETS[index]
+        is_custom = w < 0
+        self.sb_width.setEnabled(is_custom)
+        self.sb_height.setEnabled(is_custom)
+        if not is_custom:
+            self.sb_width.setValue(w)
+            self.sb_height.setValue(h)
+
+    def values(self):
+        start = self.sb_start.value()
+        end = self.sb_end.value()
+        if end < start:
+            start, end = end, start
+        return {
+            'color': self.bg_color,
+            'width': self.sb_width.value(),
+            'height': self.sb_height.value(),
+            'start': start,
+            'end': end,
+        }
+
+
+class AnimRef(QDockWidget):
+    def __init__(self, parent=None):
+        if parent is None:
+            parent = _getMaxMainWindow()
+        QDockWidget.__init__(self, parent)
 
         self.init()
 
-        self.setWindowFlags(QtCore.Qt.WindowType.Window)
+        # Register as a dockable widget with the 3ds Max main window, but
+        # keep it floating by default. It will only dock when dragged by its
+        # title bar onto one of the Max dock areas.
+        self.setAllowedAreas(QtCore.Qt.AllDockWidgetAreas)
+        self.setFeatures(
+            QDockWidget.DockWidgetMovable
+            | QDockWidget.DockWidgetFloatable
+            | QDockWidget.DockWidgetClosable
+        )
+        if isinstance(parent, QMainWindow):
+            parent.addDockWidget(QtCore.Qt.RightDockWidgetArea, self)
+        self.setFloating(True)
         self.resize(1024, 720)
         self.setWindowTitle("AnimRef v2.0")
 
@@ -97,13 +223,9 @@ class AnimRef(QDialog):
         self.ui = loader.load(ui_file, self)
         ui_file.close()
 
-        # QUiLoader creates a child widget; it does not automatically make it
-        # resize with this QDialog. Put the loaded UI into a dialog layout so
-        # the whole interface follows the window size.
-        dialog_layout = QVBoxLayout(self)
-        dialog_layout.setContentsMargins(0, 0, 0, 0)
-        dialog_layout.setSpacing(0)
-        dialog_layout.addWidget(self.ui)
+        # QDockWidget hosts a single content widget; set the loaded UI as the
+        # dock widget's content so the whole interface follows the dock size.
+        self.setWidget(self.ui)
         self.ui.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def start(self):
@@ -112,16 +234,24 @@ class AnimRef(QDialog):
         self.ui.viewer.setPixmap(self.pixmap)
         self.ui.viewer.setMouseTracking(True)
         self.ui.viewer.setCursor(QtCore.Qt.BlankCursor)
+        self.ui.viewer.installEventFilter(self)
+        self.ui.lw_layers.installEventFilter(self)
+        self.ui.lw_layers.viewport().installEventFilter(self)
+        self.ui.lw_layers.setIconSize(QtCore.QSize(20, 20))
         self._setupBrushCursor()
         mxs.registerTimeCallback(self.changeTime)
 
     def changeOpacity(self):
         self.opacity = self.ui.sl_opacity.value() / 100
         self.setWindowOpacity(self.opacity)
+        lbl = getattr(self.ui, 'lbl_opacity_val', None)
+        if lbl is not None:
+            lbl.setText(f"{self.ui.sl_opacity.value()}%")
 
     def _updateBrushColorButton(self, color):
+        text_color = '#000000' if color.lightness() > 127 else '#ffffff'
         self.ui.btn_brush_color.setStyleSheet(
-            f"QPushButton {{ background-color: {color.name()}; border: none; }}"
+            f"QPushButton {{ background-color: {color.name()}; color: {text_color}; border: none; border-radius: 4px; padding: 6px 10px; text-align: left; }}"
             f"QPushButton::hover {{ background-color: {color.darker(120).name()}; }}"
         )
 
@@ -140,12 +270,18 @@ class AnimRef(QDialog):
             size_slider = getattr(self.ui, 'btn_brush_color', None)
         if size_slider is not None:
             self.brush_size = size_slider.value()
+        lbl = getattr(self.ui, 'lbl_size_val', None)
+        if lbl is not None:
+            lbl.setText(f"{self.brush_size} px")
         self._regenerateCursorPixmap()
 
     def changeBrushFlow(self):
         flow_slider = getattr(self.ui, 'sl_brush_flow', None)
         if flow_slider is not None:
             self.brush_flow = flow_slider.value()
+        lbl = getattr(self.ui, 'lbl_flow_val', None)
+        if lbl is not None:
+            lbl.setText(f"{self.brush_flow}%")
         self._regenerateCursorPixmap()
 
     def defineVariables(self):
@@ -166,6 +302,7 @@ class AnimRef(QDialog):
         self._layer_undo_stacks = []
         self._layer_redo_stacks = []
         self._scaled_bases = {}
+        self.ghost_frames = self.ui.sb_ghosting.value()
         self.opacity = 1
         self.images_path = None
         self.last_frame = 0
@@ -194,7 +331,11 @@ class AnimRef(QDialog):
         # self.ui.timeSlider.valueChanged.connect(self.goToFrame)
         self.ui.sl_opacity.valueChanged.connect(self.changeOpacity)
         self.ui.btn_load_seq.clicked.connect(self.load_seq)
+        new_seq_btn = getattr(self.ui, 'btn_new_seq', None)
+        if new_seq_btn is not None:
+            new_seq_btn.clicked.connect(self.new_seq)
         self.ui.sb_time_shift.valueChanged.connect(self.updateTimeShift)
+        self.ui.sb_ghosting.valueChanged.connect(self.updateGhosting)
         self.ui.btn_n_frame.clicked.connect(self.nextFrame)
         self.ui.btn_p_frame.clicked.connect(self.previousFrame)
         self.ui.btn_play.clicked.connect(self.playFrame)
@@ -274,6 +415,10 @@ class AnimRef(QDialog):
         self.ui.btn_play.setChecked(False)
         self.ui.sb_time_shift.setEnabled(True)
 
+    def updateGhosting(self):
+        self.ghost_frames = self.ui.sb_ghosting.value()
+        self.changeTime()
+
     def updateTimeShift(self):
         self.time_shift = self.ui.sb_time_shift.value()
         self.changeTime()
@@ -318,6 +463,40 @@ class AnimRef(QDialog):
         except:
             self.status_3()
             self.changeTime()
+
+    def new_seq(self):
+        dialog = NewSequenceDialog(self)
+        if dialog.exec() != QDialog.Accepted:
+            return
+
+        opts = dialog.values()
+        frame_count = opts['end'] - opts['start'] + 1
+
+        self.height = self.ui.viewer.height()
+        self.width = self.ui.viewer.width()
+
+        self.images = {}
+        self.images_path = None
+        blank = QtGui.QPixmap(opts['width'], opts['height'])
+        blank.fill(opts['color'])
+        for i in range(frame_count):
+            self.images[i] = blank
+
+        self.last_frame = frame_count
+        self._scaled_bases = {}
+        self._initOverlays()
+        self._updateLayersList()
+        self.ui.sb_time_shift.setValue(opts['start'])
+        self.isLoaded = True
+        self.ui.btn_play.setEnabled(True)
+        self.ui.btn_s_frame.setEnabled(True)
+        self.ui.btn_p_frame.setEnabled(True)
+        self.ui.btn_n_frame.setEnabled(True)
+        self.ui.btn_e_frame.setEnabled(True)
+        self.ui.sb_time_shift.setEnabled(True)
+        self.ui.btn_loop.setEnabled(True)
+        self.status_1()
+        self.changeTime()
 
     def _getScaledBase(self, frame):
         key = (frame, self.width, self.height)
@@ -380,6 +559,8 @@ class AnimRef(QDialog):
         self.handle_icon = QtGui.QIcon(os.path.join(icons_dir, 'handle.png'))
         self.new_layer_icon = QtGui.QIcon(os.path.join(icons_dir, 'new_layer.png'))
         self.delete_layer_icon = QtGui.QIcon(os.path.join(icons_dir, 'delete_layer.png'))
+        self.show_icon = QtGui.QIcon(os.path.join(icons_dir, 'show.png'))
+        self.hide_icon = QtGui.QIcon(os.path.join(icons_dir, 'hide.png'))
 
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_n_frame.setIcon(self.n_frame_icon)
@@ -387,6 +568,9 @@ class AnimRef(QDialog):
         self.ui.btn_s_frame.setIcon(self.s_frame_icon)
         self.ui.btn_e_frame.setIcon(self.e_frame_icon)
         self.ui.btn_load_seq.setIcon(self.load_images_icon)
+        new_seq_btn = getattr(self.ui, 'btn_new_seq', None)
+        if new_seq_btn is not None:
+            new_seq_btn.setIcon(self.seq_icon)
         self.ui.btn_loop.setIcon(self.loop_icon)
         self.ui.btn_converter.setIcon(self.seq_icon)
         self.ui.btn_undo.setIcon(self.undo_icon)
@@ -406,6 +590,20 @@ class AnimRef(QDialog):
         self.updateFrame()
         self.changeTime()
         self._regenerateCursorPixmap()
+
+    def eventFilter(self, obj, event):
+        if obj is self.ui.viewer and event.type() == QtCore.QEvent.Type.Resize:
+            self._scaled_bases = {}
+            self.updateFrame()
+            self.changeTime()
+            self._regenerateCursorPixmap()
+        elif obj is self.ui.lw_layers.viewport() and event.type() == QtCore.QEvent.Type.MouseButtonPress:
+            pos = event.position().toPoint()
+            item = self.ui.lw_layers.itemAt(pos)
+            if item is not None and pos.x() <= 36:
+                self._toggleLayerVisibility(self.ui.lw_layers.row(item))
+                return True
+        return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
         mxs.unregisterTimeCallback(self.changeTime)
@@ -439,21 +637,34 @@ class AnimRef(QDialog):
             pm = QtGui.QPixmap(w, h)
             pm.fill(QtCore.Qt.transparent)
             overlays[i] = pm
-        self.layers.append({'name': 'default', 'overlays': overlays})
+        self.layers.append({'name': 'default', 'overlays': overlays, 'visible': True})
         self._layer_undo_stacks.append({i: [] for i in range(self.last_frame)})
         self._layer_redo_stacks.append({i: [] for i in range(self.last_frame)})
         self._overlay_ratio = ratio
 
-    def _compositeOverlay(self, base_pixmap, frame_index):
-        result = QtGui.QPixmap(base_pixmap)
-        painter = QtGui.QPainter(result)
+    def _drawLayersForFrame(self, painter, result, frame_index):
         for layer in self.layers:
+            if not layer.get('visible', True):
+                continue
             overlay = layer['overlays'].get(frame_index)
             if overlay and not overlay.isNull():
                 scaled_overlay = overlay.scaled(result.width(), result.height(),
                                                 QtCore.Qt.KeepAspectRatio,
                                                 QtCore.Qt.FastTransformation)
                 painter.drawPixmap(0, 0, scaled_overlay)
+
+    def _compositeOverlay(self, base_pixmap, frame_index):
+        result = QtGui.QPixmap(base_pixmap)
+        painter = QtGui.QPainter(result)
+        ghost = getattr(self, 'ghost_frames', 0)
+        if ghost > 0:
+            for offset in range(ghost, 0, -1):
+                painter.setOpacity(0.5 / offset)
+                for f in (frame_index - offset, frame_index + offset):
+                    if 0 <= f < self.last_frame:
+                        self._drawLayersForFrame(painter, result, f)
+            painter.setOpacity(1.0)
+        self._drawLayersForFrame(painter, result, frame_index)
         painter.end()
         return result
 
@@ -477,9 +688,15 @@ class AnimRef(QDialog):
         viewer_h = self.ui.viewer.height()
         src_w = src.width()
         src_h = src.height()
-        scale = min(viewer_w / src_w, viewer_h / src_h)
-        scaled_w = int(src_w * scale)
-        scaled_h = int(src_h * scale)
+        displayed = self.ui.viewer.pixmap()
+        if displayed is not None and not displayed.isNull():
+            scaled_w = displayed.width()
+            scaled_h = displayed.height()
+            scale = scaled_w / src_w
+        else:
+            scale = min(viewer_w / src_w, viewer_h / src_h)
+            scaled_w = int(src_w * scale)
+            scaled_h = int(src_h * scale)
         ratio = self._overlay_ratio
         offset_x = (viewer_w - scaled_w) // 2
         offset_y = (viewer_h - scaled_h) // 2
@@ -676,7 +893,7 @@ class AnimRef(QDialog):
         if not ok:
             return
         name = name.strip() or default_name
-        self.layers.append({'name': name, 'overlays': overlays})
+        self.layers.append({'name': name, 'overlays': overlays, 'visible': True})
         self._layer_undo_stacks.append({i: [] for i in range(self.last_frame)})
         self._layer_redo_stacks.append({i: [] for i in range(self.last_frame)})
         self._updateLayersList()
@@ -732,10 +949,21 @@ class AnimRef(QDialog):
         self._syncing_layers = True
         lw_layers.clear()
         for i, layer in enumerate(self.layers):
-            item = QtWidgets.QListWidgetItem(self.handle_icon, layer['name'])
+            icon = self.show_icon if layer.get('visible', True) else self.hide_icon
+            item = QtWidgets.QListWidgetItem(icon, layer['name'])
             item.setData(QtCore.Qt.UserRole, i)
             lw_layers.addItem(item)
         self._syncing_layers = False
+
+    def _toggleLayerVisibility(self, row):
+        if row < 0 or row >= len(self.layers):
+            return
+        layer = self.layers[row]
+        layer['visible'] = not layer.get('visible', True)
+        item = self.ui.lw_layers.item(row)
+        if item is not None:
+            item.setIcon(self.show_icon if layer['visible'] else self.hide_icon)
+        self._refreshViewer(int(mxs.currentTime) - self.time_shift)
 
     def _onLayersReordered(self, *args):
         if getattr(self, '_syncing_layers', False):
