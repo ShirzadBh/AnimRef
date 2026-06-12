@@ -2,11 +2,11 @@ import os
 import subprocess
 import urllib.request
 
-from PySide6 import QtCore, QtGui
+from PySide6 import QtCore, QtGui, QtWidgets
 from PySide6.QtCore import QFile
 from PySide6.QtGui import QIcon, QColor, QPainter
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel, QColorDialog
+from PySide6.QtWidgets import QMessageBox, QVBoxLayout, QSizePolicy, QFileDialog, QPushButton, QDialog, QWidget, QLabel, QColorDialog, QInputDialog
 from pymxs import runtime as mxs
 
 
@@ -96,16 +96,23 @@ class AnimRef(QDialog):
         ui_file.open(QFile.ReadOnly)
         self.ui = loader.load(ui_file, self)
         ui_file.close()
-        layout = QVBoxLayout()
-        layout.addWidget(self.ui)
-        layout.setContentsMargins(4, 4, 4, 4)
-        self.setLayout(layout)
+
+        # QUiLoader creates a child widget; it does not automatically make it
+        # resize with this QDialog. Put the loaded UI into a dialog layout so
+        # the whole interface follows the window size.
+        dialog_layout = QVBoxLayout(self)
+        dialog_layout.setContentsMargins(0, 0, 0, 0)
+        dialog_layout.setSpacing(0)
+        dialog_layout.addWidget(self.ui)
+        self.ui.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def start(self):
-        self.ui.viewer.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.ui.viewer.setAlignment(QtCore.Qt.AlignCenter)
         self.pixmap = self.no_image.scaled(400, 200, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
         self.ui.viewer.setPixmap(self.pixmap)
+        self.ui.viewer.setMouseTracking(True)
+        self.ui.viewer.setCursor(QtCore.Qt.BlankCursor)
+        self._setupBrushCursor()
         mxs.registerTimeCallback(self.changeTime)
 
     def changeOpacity(self):
@@ -125,6 +132,7 @@ class AnimRef(QDialog):
         if color.isValid():
             self.brush_color = color
             self._updateBrushColorButton(color)
+            self._regenerateCursorPixmap()
 
     def changeBrushSize(self):
         size_slider = getattr(self.ui, 'sl_brush_size', None)
@@ -132,6 +140,13 @@ class AnimRef(QDialog):
             size_slider = getattr(self.ui, 'btn_brush_color', None)
         if size_slider is not None:
             self.brush_size = size_slider.value()
+        self._regenerateCursorPixmap()
+
+    def changeBrushFlow(self):
+        flow_slider = getattr(self.ui, 'sl_brush_flow', None)
+        if flow_slider is not None:
+            self.brush_flow = flow_slider.value()
+        self._regenerateCursorPixmap()
 
     def defineVariables(self):
         self.last_valid_frame = 0
@@ -146,7 +161,10 @@ class AnimRef(QDialog):
         self.width = self.ui.viewer.width()
         self.images_backup = {}
         self.images = {}
-        self.overlays = {}
+        self.layers = []
+        self.active_layer = 0
+        self._layer_undo_stacks = []
+        self._layer_redo_stacks = []
         self._scaled_bases = {}
         self.opacity = 1
         self.images_path = None
@@ -162,11 +180,13 @@ class AnimRef(QDialog):
         self._min_draw_dist = 2
         self._draw_buffer = []
         self._draw_flush_timer = None
-        self._undo_stacks = {}
-        self._redo_stacks = {}
         self._max_undo = 20
         self.brush_size = 20
         self.brush_color = QtGui.QColor(255, 0, 0, 200)
+        self.brush_flow = 100
+        self.is_eraser = False
+        self._cursor_label = None
+        self._cursor_timer = None
 
     def defineSignals(self):
         self.ui.btn_converter.clicked.connect(self.convertedExist)
@@ -192,8 +212,30 @@ class AnimRef(QDialog):
             size_slider.valueChanged.connect(self.changeBrushSize)
             self.changeBrushSize()
 
+        flow_slider = getattr(self.ui, 'sl_brush_flow', None)
+        if flow_slider is not None:
+            flow_slider.valueChanged.connect(self.changeBrushFlow)
+            self.changeBrushFlow()
+
         self.ui.btn_undo.clicked.connect(self.undo)
         self.ui.btn_redo.clicked.connect(self.redo)
+        brush_btn = getattr(self.ui, 'btn_brush', None)
+        if brush_btn is not None:
+            brush_btn.setCheckable(True)
+            brush_btn.setChecked(True)
+            brush_btn.clicked.connect(self._toggleTool)
+        eraser_btn = getattr(self.ui, 'btn_eraser', None)
+        if eraser_btn is not None:
+            eraser_btn.setCheckable(True)
+            eraser_btn.clicked.connect(self._toggleTool)
+
+        self.ui.btn_add_layer.clicked.connect(self.addLayer)
+        self.ui.btn_remove_layer.clicked.connect(self.removeLayer)
+        self.ui.lw_layers.itemClicked.connect(self.setActiveLayer)
+        self.ui.lw_layers.setDragDropMode(QtWidgets.QListWidget.InternalMove)
+        self.ui.lw_layers.model().rowsMoved.connect(self._onLayersReordered)
+        self.ui.lw_layers.model().layoutChanged.connect(self._onLayersReordered)
+        self.ui.lw_layers.itemDoubleClicked.connect(self.renameLayer)
 
     def nextFrame(self):
         mxs.stopAnimation()
@@ -257,6 +299,7 @@ class AnimRef(QDialog):
                 self.last_frame = len(fname[0])
                 self._scaled_bases = {}
                 self._initOverlays()
+                self._updateLayersList()
                 self.isLoaded = True
                 self.ui.btn_play.setEnabled(True)
                 self.ui.btn_s_frame.setEnabled(True)
@@ -313,28 +356,30 @@ class AnimRef(QDialog):
                         if is_playing and out:
                             mxs.playAnimation()
                 self.out_of_range = True
+        self._regenerateCursorPixmap()
 
     def defineIcons(self):
-        self.icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'icon.png'))
-        self.play_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'play.png'))
-        self.n_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'n_frame.png'))
-        self.p_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'p_frame.png'))
-        self.s_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 's_frame.png'))
-        self.e_frame_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'e_frame.png'))
-        self.load_images_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'load_images.png'))
-        self.loop_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'loop.png'))
-        self.pause_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'pause.png'))
-        self.seq_icon = QtGui.QIcon(
-            os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'seq.png'))
+        if DEV:
+            icons_dir = r"C:\Users\cgcen\Documents\GitHub\AnimRef\AnimRef\Contents\icons"
+        else:
+            icons_dir = os.path.join(self.dir, 'AnimRef', 'Contents', 'icons')
+        self.icon = QtGui.QIcon(os.path.join(icons_dir, 'icon.png'))
+        self.play_icon = QtGui.QIcon(os.path.join(icons_dir, 'play.png'))
+        self.n_frame_icon = QtGui.QIcon(os.path.join(icons_dir, 'n_frame.png'))
+        self.p_frame_icon = QtGui.QIcon(os.path.join(icons_dir, 'p_frame.png'))
+        self.s_frame_icon = QtGui.QIcon(os.path.join(icons_dir, 's_frame.png'))
+        self.e_frame_icon = QtGui.QIcon(os.path.join(icons_dir, 'e_frame.png'))
+        self.load_images_icon = QtGui.QIcon(os.path.join(icons_dir, 'load_images.png'))
+        self.loop_icon = QtGui.QIcon(os.path.join(icons_dir, 'loop.png'))
+        self.pause_icon = QtGui.QIcon(os.path.join(icons_dir, 'pause.png'))
+        self.seq_icon = QtGui.QIcon(os.path.join(icons_dir, 'seq.png'))
+        self.undo_icon = QtGui.QIcon(os.path.join(icons_dir, 'undo.png'))
+        self.redo_icon = QtGui.QIcon(os.path.join(icons_dir, 'redo.png'))
+        self.pen_icon = QtGui.QIcon(os.path.join(icons_dir, 'pen.png'))
+        self.eraser_icon = QtGui.QIcon(os.path.join(icons_dir, 'eraser.png'))
+        self.handle_icon = QtGui.QIcon(os.path.join(icons_dir, 'handle.png'))
+        self.new_layer_icon = QtGui.QIcon(os.path.join(icons_dir, 'new_layer.png'))
+        self.delete_layer_icon = QtGui.QIcon(os.path.join(icons_dir, 'delete_layer.png'))
 
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_n_frame.setIcon(self.n_frame_icon)
@@ -344,15 +389,23 @@ class AnimRef(QDialog):
         self.ui.btn_load_seq.setIcon(self.load_images_icon)
         self.ui.btn_loop.setIcon(self.loop_icon)
         self.ui.btn_converter.setIcon(self.seq_icon)
+        self.ui.btn_undo.setIcon(self.undo_icon)
+        self.ui.btn_redo.setIcon(self.redo_icon)
+        self.ui.btn_brush.setIcon(self.pen_icon)
+        self.ui.btn_eraser.setIcon(self.eraser_icon)
+        self.ui.btn_add_layer.setIcon(self.new_layer_icon)
+        self.ui.btn_remove_layer.setIcon(self.delete_layer_icon)
 
     def wheelEvent(self, event):
         if self.isLoaded:
             mxs.sliderTime += (event.angleDelta().y() / 120)
 
     def resizeEvent(self, event):
+        super().resizeEvent(event)
         self._scaled_bases = {}
         self.updateFrame()
         self.changeTime()
+        self._regenerateCursorPixmap()
 
     def closeEvent(self, event):
         mxs.unregisterTimeCallback(self.changeTime)
@@ -368,11 +421,13 @@ class AnimRef(QDialog):
             self.ui.viewer.setPixmap(self.pixmap)
 
     def _initOverlays(self):
-        self.overlays = {}
-        self._undo_stacks = {}
-        self._redo_stacks = {}
+        self.layers = []
+        self._layer_undo_stacks = []
+        self._layer_redo_stacks = []
+        self.active_layer = 0
         OVERLAY_MAX = 1024
         ratio = 1.0
+        overlays = {}
         for i in range(self.last_frame):
             src = self.images[i]
             w, h = src.width(), src.height()
@@ -381,22 +436,25 @@ class AnimRef(QDialog):
                 ratio = OVERLAY_MAX / max_dim
                 w = int(w * ratio)
                 h = int(h * ratio)
-            self.overlays[i] = QtGui.QPixmap(w, h)
-            self.overlays[i].fill(QtCore.Qt.transparent)
-            self._undo_stacks[i] = []
-            self._redo_stacks[i] = []
+            pm = QtGui.QPixmap(w, h)
+            pm.fill(QtCore.Qt.transparent)
+            overlays[i] = pm
+        self.layers.append({'name': 'default', 'overlays': overlays})
+        self._layer_undo_stacks.append({i: [] for i in range(self.last_frame)})
+        self._layer_redo_stacks.append({i: [] for i in range(self.last_frame)})
         self._overlay_ratio = ratio
 
     def _compositeOverlay(self, base_pixmap, frame_index):
         result = QtGui.QPixmap(base_pixmap)
-        overlay = self.overlays.get(frame_index)
-        if overlay and not overlay.isNull():
-            painter = QtGui.QPainter(result)
-            scaled_overlay = overlay.scaled(result.width(), result.height(),
-                                            QtCore.Qt.KeepAspectRatio,
-                                            QtCore.Qt.FastTransformation)
-            painter.drawPixmap(0, 0, scaled_overlay)
-            painter.end()
+        painter = QtGui.QPainter(result)
+        for layer in self.layers:
+            overlay = layer['overlays'].get(frame_index)
+            if overlay and not overlay.isNull():
+                scaled_overlay = overlay.scaled(result.width(), result.height(),
+                                                QtCore.Qt.KeepAspectRatio,
+                                                QtCore.Qt.FastTransformation)
+                painter.drawPixmap(0, 0, scaled_overlay)
+        painter.end()
         return result
 
     def _refreshViewer(self, frame):
@@ -411,7 +469,9 @@ class AnimRef(QDialog):
         frame = self._draw_frame
         if frame is None or frame < 0 or frame >= self.last_frame or frame not in self.images:
             return
-        overlay = self.overlays[frame]
+        if not self.layers or self.active_layer < 0:
+            return
+        overlay = self.layers[self.active_layer]['overlays'][frame]
         src = self.images[frame]
         viewer_w = self.ui.viewer.width()
         viewer_h = self.ui.viewer.height()
@@ -432,7 +492,9 @@ class AnimRef(QDialog):
             return QtCore.QPoint(int(rx / scale * ratio), int(ry / scale * ratio))
 
         painter = QtGui.QPainter(overlay)
-        pen = QtGui.QPen(self.brush_color)
+        if self.is_eraser:
+            painter.setCompositionMode(QtGui.QPainter.CompositionMode_Clear)
+        pen = QtGui.QPen()
         pen.setCapStyle(QtCore.Qt.RoundCap)
         for i in range(len(points) - 1):
             pos1, press1 = points[i]
@@ -440,8 +502,15 @@ class AnimRef(QDialog):
             p1 = map_pos(pos1)
             p2 = map_pos(pos2)
             if p1 is not None and p2 is not None:
-                width = max(1, int(self.brush_size * ((press1 + press2) / 2.0)))
+                avg_pressure = (press1 + press2) / 2.0
+                multiplier = 2 if self.is_eraser else 1
+                width = max(1, int(self.brush_size * multiplier * avg_pressure))
                 pen.setWidth(width)
+                if not self.is_eraser:
+                    alpha = int(self.brush_color.alpha() * self.brush_flow / 100.0 * avg_pressure)
+                    pen_color = QtGui.QColor(self.brush_color)
+                    pen_color.setAlpha(alpha)
+                    pen.setColor(pen_color)
                 painter.setPen(pen)
                 painter.drawLine(p1, p2)
         painter.end()
@@ -449,10 +518,12 @@ class AnimRef(QDialog):
     def _pushUndoState(self, frame):
         if frame is None or frame < 0 or frame >= self.last_frame or frame not in self.images:
             return
-        overlay = self.overlays.get(frame)
+        if not self.layers or self.active_layer < 0:
+            return
+        overlay = self.layers[self.active_layer]['overlays'].get(frame)
         if overlay is None or overlay.isNull():
             return
-        stack = self._undo_stacks.get(frame, [])
+        stack = self._layer_undo_stacks[self.active_layer].get(frame, [])
         # Don't push duplicate state (same size == likely same content since overlay is drawn on)
         if stack:
             last = stack[-1]
@@ -463,7 +534,7 @@ class AnimRef(QDialog):
         stack.append(overlay.copy())
         if len(stack) > self._max_undo:
             stack.pop(0)
-        self._redo_stacks[frame] = []
+        self._layer_redo_stacks[self.active_layer][frame] = []
 
     def _flushDrawBuffer(self):
         if len(self._draw_buffer) < 2 or self._draw_frame is None:
@@ -479,14 +550,22 @@ class AnimRef(QDialog):
         # Only handle tablet input on the viewer widget; let buttons/sliders get their own events
         viewer_pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
         if not self.ui.viewer.rect().contains(viewer_pos):
+            if self._cursor_label is not None:
+                self._cursor_label.hide()
             event.ignore()
             return
         if not self.isLoaded:
             event.ignore()
             return
+        if self._cursor_label is not None:
+            self._updateCursorPos(viewer_pos)
+            self._cursor_label.show()
         pressure = event.pressure()
         etype = event.type()
         if etype == QtCore.QEvent.Type.TabletPress:
+            if not self.layers or self.active_layer < 0:
+                event.accept()
+                return
             self.drawing = True
             self._tablet_drawing = True
             self._draw_frame = int(mxs.currentTime) - self.time_shift
@@ -499,7 +578,10 @@ class AnimRef(QDialog):
             if self.drawing and self._tablet_drawing:
                 self._draw_buffer.append((viewer_pos, pressure))
                 self.last_draw_pos = viewer_pos
-                event.accept()
+            if self._cursor_label is not None:
+                self._updateCursorPos(viewer_pos)
+                self._cursor_label.show()
+            event.accept()
         elif etype == QtCore.QEvent.Type.TabletRelease:
             if self._tablet_drawing:
                 self.drawing = False
@@ -517,6 +599,8 @@ class AnimRef(QDialog):
         if self._tablet_drawing:
             return
         if event.button() == QtCore.Qt.LeftButton and self.isLoaded:
+            if not self.layers or self.active_layer < 0:
+                return
             self.drawing = True
             self._draw_frame = int(mxs.currentTime) - self.time_shift
             self._pushUndoState(self._draw_frame)
@@ -528,10 +612,16 @@ class AnimRef(QDialog):
     def mouseMoveEvent(self, event):
         if self._tablet_drawing:
             return
+        pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
         if self.drawing and self.isLoaded:
-            pos = self.ui.viewer.mapFrom(self, event.position().toPoint())
             self._draw_buffer.append((pos, 1.0))
             self.last_draw_pos = pos
+        if self.isLoaded and self._cursor_label is not None:
+            if self.ui.viewer.rect().contains(pos):
+                self._updateCursorPos(pos)
+                self._cursor_label.show()
+            else:
+                self._cursor_label.hide()
 
     def mouseReleaseEvent(self, event):
         if self._tablet_drawing:
@@ -546,30 +636,234 @@ class AnimRef(QDialog):
             self.last_draw_pos = None
             self._draw_frame = None
 
+    def _toggleTool(self):
+        sender = self.sender()
+        eraser_btn = getattr(self.ui, 'btn_eraser', None)
+        brush_btn = getattr(self.ui, 'btn_brush', None)
+        if sender is eraser_btn:
+            if eraser_btn.isChecked():
+                if brush_btn:
+                    brush_btn.setChecked(False)
+                self.is_eraser = True
+            else:
+                self.is_eraser = False
+        elif sender is brush_btn:
+            if brush_btn.isChecked():
+                if eraser_btn:
+                    eraser_btn.setChecked(False)
+                self.is_eraser = False
+            else:
+                self.is_eraser = False
+        self._regenerateCursorPixmap()
+
+    def addLayer(self):
+        if self.last_frame == 0:
+            return
+        overlays = {}
+        for i in range(self.last_frame):
+            src = self.images[i]
+            w, h = src.width(), src.height()
+            max_dim = max(w, h)
+            if max_dim > 1024:
+                ratio = 1024 / max_dim
+                w = int(w * ratio)
+                h = int(h * ratio)
+            pm = QtGui.QPixmap(w, h)
+            pm.fill(QtCore.Qt.transparent)
+            overlays[i] = pm
+        default_name = f"Layer {len(self.layers) + 1}"
+        name, ok = QInputDialog.getText(self, 'New Layer', 'Layer name:', text=default_name)
+        if not ok:
+            return
+        name = name.strip() or default_name
+        self.layers.append({'name': name, 'overlays': overlays})
+        self._layer_undo_stacks.append({i: [] for i in range(self.last_frame)})
+        self._layer_redo_stacks.append({i: [] for i in range(self.last_frame)})
+        self._updateLayersList()
+        lw_layers = getattr(self.ui, 'lw_layers', None)
+        if lw_layers is not None:
+            lw_layers.setCurrentRow(len(self.layers) - 1)
+        self.setActiveLayer()
+
+    def removeLayer(self):
+        idx = getattr(self.ui, 'lw_layers', None)
+        row = idx.currentRow() if idx is not None else self.active_layer
+        if row < 0 or row >= len(self.layers):
+            return
+        del self.layers[row]
+        del self._layer_undo_stacks[row]
+        del self._layer_redo_stacks[row]
+        if len(self.layers) == 0:
+            self.active_layer = -1
+        else:
+            new_active = min(row, len(self.layers) - 1)
+            self.active_layer = new_active
+        self._updateLayersList()
+        lw_layers = getattr(self.ui, 'lw_layers', None)
+        if lw_layers is not None:
+            if self.active_layer >= 0:
+                lw_layers.setCurrentRow(self.active_layer)
+            else:
+                lw_layers.clearSelection()
+        self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
+    def setActiveLayer(self):
+        lw_layers = getattr(self.ui, 'lw_layers', None)
+        if lw_layers is not None:
+            row = lw_layers.currentRow()
+            if 0 <= row < len(self.layers):
+                self.active_layer = row
+        self._regenerateCursorPixmap()
+
+    def renameLayer(self, item):
+        row = self.ui.lw_layers.row(item)
+        if row < 0 or row >= len(self.layers):
+            return
+        old_name = self.layers[row]['name']
+        new_name, ok = QInputDialog.getText(self, 'Rename Layer', 'Layer name:', text=old_name)
+        if ok and new_name.strip():
+            self.layers[row]['name'] = new_name.strip()
+            item.setText(new_name.strip())
+
+    def _updateLayersList(self):
+        lw_layers = getattr(self.ui, 'lw_layers', None)
+        if lw_layers is None:
+            return
+        self._syncing_layers = True
+        lw_layers.clear()
+        for i, layer in enumerate(self.layers):
+            item = QtWidgets.QListWidgetItem(self.handle_icon, layer['name'])
+            item.setData(QtCore.Qt.UserRole, i)
+            lw_layers.addItem(item)
+        self._syncing_layers = False
+
+    def _onLayersReordered(self, *args):
+        if getattr(self, '_syncing_layers', False):
+            return
+        lw = self.ui.lw_layers
+        new_order = [lw.item(i).data(QtCore.Qt.UserRole) for i in range(lw.count())]
+        if new_order == list(range(len(self.layers))):
+            return
+        old_active = self.layers[self.active_layer] if 0 <= self.active_layer < len(self.layers) else None
+        self.layers = [self.layers[i] for i in new_order]
+        self._layer_undo_stacks = [self._layer_undo_stacks[i] for i in new_order]
+        self._layer_redo_stacks = [self._layer_redo_stacks[i] for i in new_order]
+        for i in range(lw.count()):
+            lw.item(i).setData(QtCore.Qt.UserRole, i)
+        if old_active is not None:
+            for i, layer in enumerate(self.layers):
+                if layer is old_active:
+                    self.active_layer = i
+                    break
+        self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
+    def _setupBrushCursor(self):
+        self._cursor_label = QLabel(self.ui.viewer)
+        self._cursor_label.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        self._cursor_label.setStyleSheet("background: transparent;")
+        self._cursor_label.hide()
+        self._regenerateCursorPixmap()
+        self._cursor_timer = QtCore.QTimer(self)
+        self._cursor_timer.timeout.connect(self._trackCursor)
+        self._cursor_timer.start(16)
+
+    def _regenerateCursorPixmap(self):
+        if self._cursor_label is None:
+            return
+        visual_size = self._getVisualBrushSize()
+        multiplier = 2 if self.is_eraser else 1
+        diameter = max(4, visual_size * multiplier)
+        size = diameter + 8
+        pixmap = QtGui.QPixmap(size, size)
+        pixmap.fill(QtCore.Qt.transparent)
+        painter = QtGui.QPainter(pixmap)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        flow_alpha = int(255 * self.brush_flow / 100.0)
+        if self.is_eraser:
+            pen_color = QtGui.QColor(255, 255, 255)
+            fill_color = QtGui.QColor(255, 255, 255, max(30, flow_alpha // 3))
+        else:
+            pen_color = QtGui.QColor(self.brush_color)
+            pen_color.setAlpha(255)
+            fill_color = QtGui.QColor(self.brush_color)
+            fill_color.setAlpha(max(30, flow_alpha // 3))
+        pen = QtGui.QPen(pen_color)
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.setBrush(fill_color)
+        painter.drawEllipse(2, 2, diameter, diameter)
+        painter.end()
+        self._cursor_label.setPixmap(pixmap)
+        self._cursor_label.resize(size, size)
+
+    def _updateCursorPos(self, pos):
+        if self._cursor_label is None or self._cursor_label.pixmap() is None:
+            return
+        size = self._cursor_label.pixmap().width()
+        self._cursor_label.move(pos.x() - size // 2, pos.y() - size // 2)
+
+    def _trackCursor(self):
+        if self._cursor_label is None:
+            return
+        global_pos = QtGui.QCursor.pos()
+        viewer_pos = self.ui.viewer.mapFromGlobal(global_pos)
+        if self.ui.viewer.rect().contains(viewer_pos):
+            self._updateCursorPos(viewer_pos)
+            self._cursor_label.show()
+        else:
+            self._cursor_label.hide()
+
+    def _getVisualBrushSize(self):
+        if not self.isLoaded or self.last_frame == 0:
+            return self.brush_size
+        frame = int(mxs.currentTime) - self.time_shift
+        if frame < 0 or frame >= self.last_frame:
+            frame = 0
+        src = self.images.get(frame)
+        if not self.layers or self.active_layer < 0:
+            return self.brush_size
+        overlay = self.layers[self.active_layer]['overlays'].get(frame)
+        if src is None or overlay is None or overlay.isNull():
+            return self.brush_size
+        viewer_w = self.ui.viewer.width()
+        viewer_h = self.ui.viewer.height()
+        src_w = src.width()
+        src_h = src.height()
+        scale = min(viewer_w / src_w, viewer_h / src_h)
+        display_w = int(src_w * scale)
+        overlay_w = overlay.width()
+        if overlay_w <= 0:
+            return self.brush_size
+        return max(1, int(self.brush_size * display_w / overlay_w))
+
     def undo(self):
         frame = int(mxs.currentTime) - self.time_shift
         if frame < 0 or frame >= self.last_frame:
             return
-        stack = self._undo_stacks.get(frame, [])
+        if not self.layers or self.active_layer < 0:
+            return
+        stack = self._layer_undo_stacks[self.active_layer].get(frame, [])
         if not stack:
             return
-        current = self.overlays.get(frame)
+        current = self.layers[self.active_layer]['overlays'].get(frame)
         if current is not None and not current.isNull():
-            self._redo_stacks[frame].append(current.copy())
-        self.overlays[frame] = stack.pop()
+            self._layer_redo_stacks[self.active_layer][frame].append(current.copy())
+        self.layers[self.active_layer]['overlays'][frame] = stack.pop()
         self._refreshViewer(frame)
 
     def redo(self):
         frame = int(mxs.currentTime) - self.time_shift
         if frame < 0 or frame >= self.last_frame:
             return
-        stack = self._redo_stacks.get(frame, [])
+        if not self.layers or self.active_layer < 0:
+            return
+        stack = self._layer_redo_stacks[self.active_layer].get(frame, [])
         if not stack:
             return
-        current = self.overlays.get(frame)
+        current = self.layers[self.active_layer]['overlays'].get(frame)
         if current is not None and not current.isNull():
-            self._undo_stacks[frame].append(current.copy())
-        self.overlays[frame] = stack.pop()
+            self._layer_undo_stacks[self.active_layer][frame].append(current.copy())
+        self.layers[self.active_layer]['overlays'][frame] = stack.pop()
         self._refreshViewer(frame)
 
     def status_1(self):
