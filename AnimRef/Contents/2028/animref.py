@@ -24,6 +24,642 @@ def _getMaxMainWindow():
     return widget
 
 
+# ── Theme ─────────────────────────────────────────────────────────────────────
+# Change ACCENT_COLOR here to retheme the entire tool at once.
+ACCENT_COLOR   = "#218c74"   # primary accent (teal)
+ACCENT_HOVER   = "#2eb394"   # lighter teal for hover states
+ACCENT_PRESSED = "#1a6e5c"   # darker teal for pressed / active border
+
+
+def _themed(css):
+    """Substitute %%ACCENT%%, %%HOVER%%, %%PRESSED%% tokens in a stylesheet."""
+    return (css
+            .replace("%%HOVER%%",    ACCENT_HOVER)
+            .replace("%%PRESSED%%",  ACCENT_PRESSED)
+            .replace("%%ACCENT%%",   ACCENT_COLOR))
+
+
+ANIMREF_MAIN_STYLESHEET = _themed("""
+QWidget#Form {
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+    font-family: Segoe UI, Arial, sans-serif;
+    font-size: 12px;
+}
+QLabel {
+    color: #e0e0e0;
+}
+QPushButton {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #3d3d3d;
+    border-radius: 6px;
+    padding: 6px 10px;
+    text-align: left;
+}
+QPushButton:hover {
+    background-color: #3d3d3d;
+    border-color: #4d4d4d;
+}
+QPushButton:pressed {
+    background-color: #2b2b2b;
+}
+QPushButton:checked {
+    background-color: %%ACCENT%%;
+    border-color: %%PRESSED%%;
+    color: #ffffff;
+    font-weight: bold;
+}
+QPushButton:checked:hover {
+    background-color: %%HOVER%%;
+}
+QPushButton:disabled {
+    color: #505050;
+    background-color: #252525;
+    border-color: #333333;
+}
+QPushButton#btn_s_frame, QPushButton#btn_p_frame, QPushButton#btn_play,
+QPushButton#btn_n_frame, QPushButton#btn_e_frame, QPushButton#btn_loop,
+QPushButton#btn_add_layer, QPushButton#btn_remove_layer {
+    padding: 4px;
+    text-align: center;
+    background-color: #2d2d2d;
+    border: 1px solid #3d3d3d;
+}
+QPushButton#btn_s_frame:hover, QPushButton#btn_p_frame:hover, QPushButton#btn_play:hover,
+QPushButton#btn_n_frame:hover, QPushButton#btn_e_frame:hover, QPushButton#btn_loop:hover,
+QPushButton#btn_add_layer:hover, QPushButton#btn_remove_layer:hover {
+    background-color: #3d3d3d;
+    border-color: #4d4d4d;
+}
+QPushButton#btn_ghost_forward, QPushButton#btn_ghost_backward {
+    text-align: center;
+}
+QLabel#viewer {
+    background-color: #252525;
+    border: none;
+    color: #9a9a9a;
+}
+QLabel#layersTitle {
+    font-weight: 600;
+    color: #e0e0e0;
+}
+QListWidget#lw_layers {
+    background-color: transparent;
+    border: none;
+    outline: none;
+}
+QListWidget#lw_layers::item {
+    background-color: #252525;
+    min-height: 40px;
+    padding: 6px 12px;
+    margin: 2px 4px;
+    border-radius: 8px;
+    color: #e0e0e0;
+    border: 1px solid #333333;
+}
+QListWidget#lw_layers::item:selected {
+    background-color: #1e2e2a;
+    border: 1px solid %%ACCENT%%;
+    color: #ffffff;
+}
+QListWidget#lw_layers::item:hover:!selected {
+    background-color: #2d2d2d;
+    border-color: #4d4d4d;
+}
+QSpinBox#sb_time_shift, QSpinBox#sb_ghosting, QSpinBox#sb_ghost_forward, QSpinBox#sb_ghost_backward {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+    border: 1px solid #3d3d3d;
+    border-radius: 4px;
+    padding: 2px 6px;
+}
+QSpinBox#sb_time_shift:focus, QSpinBox#sb_ghosting:focus, QSpinBox#sb_ghost_forward:focus, QSpinBox#sb_ghost_backward:focus {
+    border: 1px solid %%ACCENT%%;
+}
+QSpinBox:disabled {
+    background-color: #1e1e1e;
+    color: #484848;
+    border: 1px solid #2a2a2a;
+}
+QLabel:disabled {
+    color: #484848;
+}
+QSlider {
+    min-height: 26px;
+}
+QSlider::groove:horizontal {
+    height: 26px;
+    background: #2d2d2d;
+    border: 1px solid #3d3d3d;
+    border-radius: 6px;
+}
+QSlider::sub-page:horizontal {
+    background: #595959;
+}
+QSlider::handle:horizontal {
+    background: #7a7a7a;
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    border-radius: 2px;
+}
+QSlider::handle:horizontal:hover {
+    background: #9e9e9e;
+}
+QSlider::handle:horizontal:pressed {
+    background: #9e9e9e;
+}
+""")
+
+
+ANIMREF_DIALOG_STYLESHEET = _themed("""
+    QDialog {
+        background-color: #252525;
+        color: #e0e0e0;
+    }
+    QLabel {
+        color: #e0e0e0;
+        font-size: 12px;
+    }
+    QLabel#sectionHeader {
+        color: %%ACCENT%%;
+        font-size: 11px;
+        font-weight: bold;
+        padding-bottom: 2px;
+    }
+    QFrame#separator {
+        color: #3d3d3d;
+        background-color: #3d3d3d;
+        max-height: 1px;
+        border: none;
+    }
+    QSpinBox, QDoubleSpinBox {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid #4d4d4d;
+        border-radius: 4px;
+        padding: 4px 8px;
+        min-height: 24px;
+    }
+    QSpinBox:focus, QDoubleSpinBox:focus {
+        border: 1px solid %%ACCENT%%;
+    }
+    QSpinBox::up-button, QSpinBox::down-button,
+    QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
+        background-color: #3a3a3a;
+        border: none;
+        width: 18px;
+        subcontrol-origin: border;
+    }
+    QSpinBox::up-button:hover, QSpinBox::down-button:hover,
+    QDoubleSpinBox::up-button:hover, QDoubleSpinBox::down-button:hover {
+        background-color: #4a4a4a;
+    }
+    QSpinBox::up-arrow, QDoubleSpinBox::up-arrow {
+        image: none;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-bottom: 5px solid #b0b0b0;
+        width: 0px;
+        height: 0px;
+    }
+    QSpinBox::down-arrow, QDoubleSpinBox::down-arrow {
+        image: none;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 5px solid #b0b0b0;
+        width: 0px;
+        height: 0px;
+    }
+    QSpinBox::up-arrow:disabled, QSpinBox::down-arrow:disabled,
+    QDoubleSpinBox::up-arrow:disabled, QDoubleSpinBox::down-arrow:disabled {
+        border-bottom-color: #505050;
+        border-top-color: #505050;
+    }
+    QComboBox {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid #4d4d4d;
+        border-radius: 4px;
+        padding: 4px 8px;
+        min-height: 24px;
+    }
+    QComboBox:focus {
+        border: 1px solid %%ACCENT%%;
+    }
+    QComboBox::drop-down {
+        border: none;
+        width: 24px;
+    }
+    QComboBox::down-arrow {
+        image: none;
+        border-left: 4px solid transparent;
+        border-right: 4px solid transparent;
+        border-top: 5px solid #b0b0b0;
+        margin-right: 6px;
+    }
+    QComboBox QAbstractItemView {
+        background-color: #1e1e1e;
+        color: #e0e0e0;
+        selection-background-color: %%ACCENT%%;
+        selection-color: #1a1a1a;
+        border: 1px solid #4d4d4d;
+        outline: none;
+    }
+    QLineEdit {
+        background-color: #1a1a1a;
+        color: #e0e0e0;
+        border: 1px solid #4d4d4d;
+        border-radius: 4px;
+        padding: 4px 8px;
+        min-height: 24px;
+    }
+    QLineEdit:focus {
+        border: 1px solid %%ACCENT%%;
+    }
+    QCheckBox {
+        color: #e0e0e0;
+        spacing: 8px;
+        font-size: 12px;
+    }
+    QCheckBox::indicator {
+        width: 16px;
+        height: 16px;
+        border: 1px solid #4d4d4d;
+        border-radius: 3px;
+        background-color: #1a1a1a;
+    }
+    QCheckBox::indicator:checked {
+        background-color: %%ACCENT%%;
+        border-color: %%ACCENT%%;
+    }
+    QPushButton {
+        background-color: #333333;
+        color: #c8c8c8;
+        border: 1px solid #4d4d4d;
+        border-radius: 4px;
+        padding: 7px 14px;
+        min-width: 80px;
+        font-size: 12px;
+    }
+    QPushButton:hover {
+        background-color: #3e3e3e;
+        color: #e0e0e0;
+    }
+    QPushButton:pressed {
+        background-color: #252525;
+    }
+    QPushButton#primaryBtn {
+        background-color: %%ACCENT%%;
+        color: #1a1a1a;
+        border: none;
+        font-weight: bold;
+    }
+    QPushButton#primaryBtn:hover {
+        background-color: %%HOVER%%;
+    }
+    QPushButton#primaryBtn:pressed {
+        background-color: %%PRESSED%%;
+    }
+""")
+
+
+class ThumbnailStrip(QtWidgets.QWidget):
+    frameClicked = QtCore.Signal(int)
+
+    THUMB_HEIGHT = 60
+    THUMB_GAP = 2
+    THUMB_WIDTH = 80
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._images = []
+        self._current_frame = -1
+        self.setMinimumHeight(self.THUMB_HEIGHT + 20)
+        self.setMaximumHeight(self.THUMB_HEIGHT + 20)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setMouseTracking(True)
+        self._thumb_positions = []
+        self.setAttribute(QtCore.Qt.WA_OpaquePaintEvent)
+        self.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents, False)
+        self.setFocusPolicy(QtCore.Qt.StrongFocus)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+        self._block_scroll_sync = False
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        self._ext_scrollbar = QtWidgets.QScrollBar(QtCore.Qt.Horizontal)
+        self._ext_scrollbar.setFixedHeight(14)
+        self._ext_scrollbar.setStyleSheet(_themed("""
+            QScrollBar:horizontal {
+                background: #1a1a1a;
+                height: 14px;
+                border: none;
+            }
+            QScrollBar::handle:horizontal {
+                background: #555555;
+                min-width: 30px;
+                border-radius: 3px;
+                margin: 2px 0px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background: %%ACCENT%%;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+            QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+                background: none;
+            }
+        """))
+        root.addWidget(self._ext_scrollbar)
+
+        self._scroll_area = QtWidgets.QScrollArea()
+        self._scroll_area.setWidgetResizable(True)
+        self._scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self._scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self._scroll_area.setFrameShape(QtWidgets.QFrame.NoFrame)
+
+        self._thumb_widget = QtWidgets.QWidget()
+        self._thumb_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self._thumb_widget.paintEvent = self._thumbWidgetPaintEvent
+        self._thumb_widget.mousePressEvent = self._thumbWidgetMousePressEvent
+        self._scroll_area.setWidget(self._thumb_widget)
+
+        root.addWidget(self._scroll_area)
+
+        self._ext_scrollbar.valueChanged.connect(self._onExtScrollChanged)
+        self._scroll_area.horizontalScrollBar().valueChanged.connect(self._onScrollChanged)
+
+    def setImages(self, images):
+        self._images = images
+        self._updateVisibleRange()
+        self._thumb_widget.update()
+
+    def updateThumbnail(self, frame_index, pixmap):
+        if 0 <= frame_index < len(self._images):
+            self._images[frame_index] = pixmap
+            self._thumb_widget.update()
+
+    def setCurrentFrame(self, frame):
+        if frame != self._current_frame:
+            self._current_frame = frame
+            self._ensureFrameVisible(frame)
+            self._thumb_widget.update()
+
+    def _ensureFrameVisible(self, frame):
+        if frame < 0 or frame >= len(self._images):
+            return
+        thumb_total_width = self.THUMB_WIDTH + self.THUMB_GAP
+        x = frame * thumb_total_width
+        scroll_pos = self._scroll_area.horizontalScrollBar().value()
+        viewport_width = self._scroll_area.viewport().width()
+
+        if x < scroll_pos:
+            self._scroll_area.horizontalScrollBar().setValue(x)
+        elif x + self.THUMB_WIDTH > scroll_pos + viewport_width:
+            self._scroll_area.horizontalScrollBar().setValue(x + self.THUMB_WIDTH - viewport_width)
+
+    def _updateVisibleRange(self):
+        if not self._images:
+            return
+
+        thumb_total_width = self.THUMB_WIDTH + self.THUMB_GAP
+        total_width = len(self._images) * thumb_total_width - self.THUMB_GAP
+        self._thumb_widget.setMinimumWidth(total_width)
+        self._thumb_widget.setMaximumHeight(self.THUMB_HEIGHT + 20)
+        sb = self._scroll_area.horizontalScrollBar()
+        self._ext_scrollbar.setRange(sb.minimum(), sb.maximum())
+        self._ext_scrollbar.setPageStep(sb.pageStep())
+        self._ext_scrollbar.setSingleStep(sb.singleStep())
+
+    def _onExtScrollChanged(self, value):
+        if self._block_scroll_sync:
+            return
+        self._block_scroll_sync = True
+        self._scroll_area.horizontalScrollBar().setValue(value)
+        self._block_scroll_sync = False
+
+    def _onScrollChanged(self, value):
+        if not self._block_scroll_sync:
+            self._block_scroll_sync = True
+            sb = self._scroll_area.horizontalScrollBar()
+            self._ext_scrollbar.setRange(sb.minimum(), sb.maximum())
+            self._ext_scrollbar.setPageStep(sb.pageStep())
+            self._ext_scrollbar.setValue(value)
+            self._block_scroll_sync = False
+        self._thumb_widget.update()
+
+    def resizeEvent(self, event):
+        self._updateVisibleRange()
+        super().resizeEvent(event)
+
+    def paintEvent(self, event):
+        pass
+
+    def _thumbWidgetPaintEvent(self, event):
+        painter = QtGui.QPainter(self._thumb_widget)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+
+        painter.fillRect(self._thumb_widget.rect(), QtGui.QColor("#2a2a2a"))
+
+        if not self._images:
+            painter.setPen(QtGui.QColor("#666666"))
+            painter.drawText(self._thumb_widget.rect(), QtCore.Qt.AlignCenter, "No sequence loaded")
+            painter.end()
+            return
+
+        total_thumbs = len(self._images)
+        if total_thumbs == 0:
+            painter.end()
+            return
+
+        self._thumb_positions = []
+
+        thumb_total_width = self.THUMB_WIDTH + self.THUMB_GAP
+        start_x = 0
+
+        for i in range(total_thumbs):
+            x = start_x + i * thumb_total_width
+            y = (self._thumb_widget.height() - self.THUMB_HEIGHT) // 2
+
+            img = self._images[i]
+            scaled = img.scaled(
+                self.THUMB_WIDTH, self.THUMB_HEIGHT,
+                QtCore.Qt.KeepAspectRatio,
+                QtCore.Qt.FastTransformation
+            )
+
+            thumb_x = x + (self.THUMB_WIDTH - scaled.width()) // 2
+            thumb_rect = QtCore.QRect(thumb_x, y, scaled.width(), scaled.height())
+            self._thumb_positions.append((i, thumb_rect))
+
+            painter.drawPixmap(thumb_rect, scaled)
+
+            if i == self._current_frame:
+                pen = QtGui.QPen(QtGui.QColor(ACCENT_COLOR))
+                pen.setWidth(2)
+                painter.setPen(pen)
+                painter.drawRect(thumb_rect.adjusted(-1, -1, 1, 1))
+            else:
+                pen = QtGui.QPen(QtGui.QColor("#4d4d4d"))
+                pen.setWidth(1)
+                painter.setPen(pen)
+                painter.drawRect(thumb_rect.adjusted(0, 0, -1, -1))
+
+            painter.setPen(QtGui.QColor("#ffffff"))
+            painter.setFont(QtGui.QFont("Arial", 8))
+            frame_text = str(i)
+            text_rect = thumb_rect.adjusted(2, 2, -2, -2)
+            font_metrics = painter.fontMetrics()
+            text_width = font_metrics.horizontalAdvance(frame_text)
+            text_height = font_metrics.height()
+            bg_rect = QtCore.QRect(
+                text_rect.right() - text_width - 2,
+                text_rect.bottom() - text_height + 2,
+                text_width + 4,
+                text_height
+            )
+            bg_color = QtGui.QColor(0, 0, 0, 128)
+            painter.fillRect(bg_rect, bg_color)
+            painter.drawText(text_rect, QtCore.Qt.AlignBottom | QtCore.Qt.AlignRight, frame_text)
+
+        painter.end()
+
+    def _thumbWidgetMousePressEvent(self, event):
+        if event.button() == QtCore.Qt.LeftButton:
+            pos = event.position().toPoint()
+            for frame, rect in self._thumb_positions:
+                if rect.contains(pos):
+                    self.frameClicked.emit(frame)
+                    event.accept()
+                    return
+
+    def mousePressEvent(self, event):
+        pass
+
+class RangeSlider(QtWidgets.QWidget):
+    rangeChanged = QtCore.Signal(int, int)
+
+    HANDLE_W = 12
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._min = 0
+        self._max = 100
+        self._low = 0
+        self._high = 100
+        self._drag = None
+        self._drag_offset = 0
+        self.setMinimumHeight(26)
+        self.setMaximumHeight(26)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setCursor(QtCore.Qt.PointingHandCursor)
+
+    def setBounds(self, minimum, maximum):
+        if maximum < minimum:
+            minimum, maximum = maximum, minimum
+        self._min = minimum
+        self._max = maximum
+        self._low = max(self._min, min(self._low, self._max))
+        self._high = max(self._min, min(self._high, self._max))
+        if self._low > self._high:
+            self._low, self._high = self._high, self._low
+        self.update()
+
+    def setValues(self, low, high):
+        if high < low:
+            low, high = high, low
+        self._low = max(self._min, min(low, self._max))
+        self._high = max(self._min, min(high, self._max))
+        self.update()
+        self.rangeChanged.emit(self._low, self._high)
+
+    def values(self):
+        return self._low, self._high
+
+    def _span(self):
+        return max(1, self._max - self._min)
+
+    def _valueToX(self, value):
+        usable = self.width() - 2 * self.HANDLE_W
+        return self.HANDLE_W + int(usable * (value - self._min) / self._span())
+
+    def _xToValue(self, x):
+        usable = max(1, self.width() - 2 * self.HANDLE_W)
+        value = self._min + (x - self.HANDLE_W) * self._span() / usable
+        return max(self._min, min(int(round(value)), self._max))
+
+    def paintEvent(self, event):
+        painter = QtGui.QPainter(self)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing)
+        rect = self.rect().adjusted(0, 0, -1, -1)
+        painter.setPen(QtGui.QPen(QtGui.QColor("#3d3d3d")))
+        painter.setBrush(QtGui.QColor("#2d2d2d"))
+        painter.drawRoundedRect(rect, 6, 6)
+
+        low_x = self._valueToX(self._low)
+        high_x = self._valueToX(self._high)
+        span_rect = QtCore.QRect(low_x, 1, max(1, high_x - low_x), self.height() - 3)
+        painter.setPen(QtCore.Qt.NoPen)
+        painter.setBrush(QtGui.QColor("#595959"))
+        painter.drawRoundedRect(span_rect, 4, 4)
+
+        painter.setBrush(QtGui.QColor("#7a7a7a"))
+        for x in (low_x, high_x):
+            handle_rect = QtCore.QRect(x - self.HANDLE_W // 2, 0, self.HANDLE_W, self.height() - 1)
+            painter.drawRoundedRect(handle_rect, 2, 2)
+
+        painter.setPen(QtGui.QColor("#e0e0e0"))
+        text = f"{self._low}  -  {self._high}"
+        painter.drawText(self.rect(), QtCore.Qt.AlignCenter, text)
+        painter.end()
+
+    def mousePressEvent(self, event):
+        if event.button() != QtCore.Qt.LeftButton:
+            return
+        x = event.position().x()
+        low_x = self._valueToX(self._low)
+        high_x = self._valueToX(self._high)
+        if abs(x - low_x) <= abs(x - high_x) and abs(x - low_x) <= self.HANDLE_W:
+            self._drag = 'low'
+        elif abs(x - high_x) <= self.HANDLE_W:
+            self._drag = 'high'
+        elif low_x < x < high_x:
+            self._drag = 'span'
+            self._drag_offset = self._xToValue(x)
+        else:
+            value = self._xToValue(x)
+            if abs(value - self._low) <= abs(value - self._high):
+                self._drag = 'low'
+                self.setValues(value, self._high)
+            else:
+                self._drag = 'high'
+                self.setValues(self._low, value)
+
+    def mouseMoveEvent(self, event):
+        if self._drag is None:
+            return
+        value = self._xToValue(event.position().x())
+        if self._drag == 'low':
+            self.setValues(min(value, self._high), self._high)
+        elif self._drag == 'high':
+            self.setValues(self._low, max(value, self._low))
+        elif self._drag == 'span':
+            delta = value - self._drag_offset
+            if delta:
+                width = self._high - self._low
+                new_low = max(self._min, min(self._low + delta, self._max - width))
+                self._drag_offset = value
+                self.setValues(new_low, new_low + width)
+
+    def mouseReleaseEvent(self, event):
+        self._drag = None
+
+
 class NewSequenceDialog(QDialog):
     RESOLUTION_PRESETS = [
         ("HD 720 (1280 x 720)", 1280, 720),
@@ -37,56 +673,111 @@ class NewSequenceDialog(QDialog):
     def __init__(self, parent=None):
         QDialog.__init__(self, parent)
         self.setWindowTitle("New Sequence")
+        self.setMinimumWidth(420)
         self.bg_color = QtGui.QColor(255, 255, 255)
+        self.setStyleSheet(ANIMREF_DIALOG_STYLESHEET)
 
-        layout = QtWidgets.QFormLayout(self)
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(14)
 
-        # 1. Background color
+        def _sep():
+            f = QtWidgets.QFrame()
+            f.setObjectName("separator")
+            f.setFrameShape(QtWidgets.QFrame.HLine)
+            return f
+
+        def _header(text):
+            lbl = QLabel(text)
+            lbl.setObjectName("sectionHeader")
+            return lbl
+
+        # --- Background ---
+        root.addWidget(_header("BACKGROUND"))
+        root.addWidget(_sep())
+
+        bg_row = QtWidgets.QHBoxLayout()
+        bg_row.setSpacing(10)
         self.btn_color = QPushButton()
-        self.btn_color.setFixedSize(60, 24)
+        self.btn_color.setFixedSize(48, 30)
+        self.btn_color.setToolTip("Click to pick background color")
         self._updateColorButton()
         self.btn_color.clicked.connect(self._pickColor)
-        layout.addRow("Background Color:", self.btn_color)
+        self.chk_transparent = QtWidgets.QCheckBox("Transparent")
+        self.chk_transparent.toggled.connect(self._onTransparentToggled)
+        bg_row.addWidget(QLabel("Color:"))
+        bg_row.addWidget(self.btn_color)
+        bg_row.addSpacing(12)
+        bg_row.addWidget(self.chk_transparent)
+        bg_row.addStretch()
+        root.addLayout(bg_row)
 
-        # 2. Resolution presets
+        # --- Resolution ---
+        root.addSpacing(4)
+        root.addWidget(_header("RESOLUTION"))
+        root.addWidget(_sep())
+
         self.cb_resolution = QtWidgets.QComboBox()
         for label, _, _ in self.RESOLUTION_PRESETS:
             self.cb_resolution.addItem(label)
         self.cb_resolution.currentIndexChanged.connect(self._onPresetChanged)
-        layout.addRow("Resolution:", self.cb_resolution)
+        root.addWidget(self.cb_resolution)
 
-        custom_row = QtWidgets.QHBoxLayout()
+        size_row = QtWidgets.QHBoxLayout()
+        size_row.setSpacing(8)
         self.sb_width = QtWidgets.QSpinBox()
         self.sb_width.setRange(8, 8192)
         self.sb_width.setValue(1280)
         self.sb_height = QtWidgets.QSpinBox()
         self.sb_height.setRange(8, 8192)
         self.sb_height.setValue(720)
-        custom_row.addWidget(QLabel("W:"))
-        custom_row.addWidget(self.sb_width)
-        custom_row.addWidget(QLabel("H:"))
-        custom_row.addWidget(self.sb_height)
-        layout.addRow("", custom_row)
+        lbl_w = QLabel("W:")
+        lbl_w.setFixedWidth(20)
+        lbl_h = QLabel("H:")
+        lbl_h.setFixedWidth(20)
+        size_row.addWidget(lbl_w)
+        size_row.addWidget(self.sb_width)
+        size_row.addWidget(lbl_h)
+        size_row.addWidget(self.sb_height)
+        root.addLayout(size_row)
 
-        # 3. Frame range
+        # --- Frame Range ---
+        root.addSpacing(4)
+        root.addWidget(_header("FRAME RANGE"))
+        root.addWidget(_sep())
+
         range_row = QtWidgets.QHBoxLayout()
+        range_row.setSpacing(8)
         self.sb_start = QtWidgets.QSpinBox()
         self.sb_start.setRange(-10000000, 10000000)
         self.sb_start.setValue(0)
         self.sb_end = QtWidgets.QSpinBox()
         self.sb_end.setRange(-10000000, 10000000)
         self.sb_end.setValue(100)
-        range_row.addWidget(QLabel("Start:"))
+        lbl_start = QLabel("Start:")
+        lbl_start.setFixedWidth(36)
+        lbl_end = QLabel("End:")
+        lbl_end.setFixedWidth(30)
+        range_row.addWidget(lbl_start)
         range_row.addWidget(self.sb_start)
-        range_row.addWidget(QLabel("End:"))
+        range_row.addWidget(lbl_end)
         range_row.addWidget(self.sb_end)
-        layout.addRow("Frame Range:", range_row)
+        root.addLayout(range_row)
 
-        buttons = QtWidgets.QDialogButtonBox(
-            QtWidgets.QDialogButtonBox.Ok | QtWidgets.QDialogButtonBox.Cancel)
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addRow(buttons)
+        # --- Buttons ---
+        root.addSpacing(8)
+        root.addWidget(_sep())
+        btn_row = QtWidgets.QHBoxLayout()
+        btn_row.setSpacing(8)
+        btn_row.addStretch()
+        btn_cancel = QPushButton("Cancel")
+        btn_cancel.clicked.connect(self.reject)
+        btn_ok = QPushButton("Create Sequence")
+        btn_ok.setObjectName("primaryBtn")
+        btn_ok.clicked.connect(self.accept)
+        btn_row.addWidget(btn_cancel)
+        btn_row.addWidget(btn_ok)
+        root.addLayout(btn_row)
 
         self._onPresetChanged(0)
 
@@ -99,6 +790,9 @@ class NewSequenceDialog(QDialog):
         if color.isValid():
             self.bg_color = color
             self._updateColorButton()
+
+    def _onTransparentToggled(self, checked):
+        self.btn_color.setEnabled(not checked)
 
     def _onPresetChanged(self, index):
         label, w, h = self.RESOLUTION_PRESETS[index]
@@ -116,10 +810,126 @@ class NewSequenceDialog(QDialog):
             start, end = end, start
         return {
             'color': self.bg_color,
+            'transparent': self.chk_transparent.isChecked(),
             'width': self.sb_width.value(),
             'height': self.sb_height.value(),
             'start': start,
             'end': end,
+        }
+
+
+class ExportDialog(QDialog):
+    def __init__(self, parent=None, last_frame=0, time_shift=0):
+        QDialog.__init__(self, parent)
+        self.setWindowTitle("Export Layers")
+        self.setMinimumWidth(440)
+        self.last_frame = last_frame
+        self.time_shift = time_shift
+        self.export_path = ""
+        self.setStyleSheet(ANIMREF_DIALOG_STYLESHEET)
+
+        root = QtWidgets.QVBoxLayout(self)
+        root.setContentsMargins(20, 20, 20, 20)
+        root.setSpacing(14)
+
+        def _sep():
+            f = QtWidgets.QFrame()
+            f.setObjectName("separator")
+            f.setFrameShape(QtWidgets.QFrame.HLine)
+            return f
+
+        def _header(text):
+            lbl = QLabel(text)
+            lbl.setObjectName("sectionHeader")
+            return lbl
+
+        # --- Frame Range ---
+        root.addWidget(_header("FRAME RANGE"))
+        root.addWidget(_sep())
+
+        range_row = QtWidgets.QHBoxLayout()
+        range_row.setSpacing(8)
+        self.sb_start = QtWidgets.QSpinBox()
+        self.sb_start.setRange(-10000000, 10000000)
+        self.sb_start.setValue(time_shift)
+        self.sb_end = QtWidgets.QSpinBox()
+        self.sb_end.setRange(-10000000, 10000000)
+        self.sb_end.setValue(time_shift + last_frame - 1)
+        lbl_start = QLabel("Start:")
+        lbl_start.setFixedWidth(36)
+        lbl_end = QLabel("End:")
+        lbl_end.setFixedWidth(30)
+        range_row.addWidget(lbl_start)
+        range_row.addWidget(self.sb_start)
+        range_row.addWidget(lbl_end)
+        range_row.addWidget(self.sb_end)
+        root.addLayout(range_row)
+
+        # --- Export Path ---
+        root.addSpacing(4)
+        root.addWidget(_header("OUTPUT PATH"))
+        root.addWidget(_sep())
+
+        path_row = QtWidgets.QHBoxLayout()
+        path_row.setSpacing(8)
+        self.le_path = QtWidgets.QLineEdit()
+        self.le_path.setPlaceholderText("Select export path...")
+        self.le_path.setReadOnly(True)
+        self.btn_browse = QPushButton("Browse...")
+        self.btn_browse.setFixedWidth(90)
+        self.btn_browse.clicked.connect(self._browsePath)
+        path_row.addWidget(self.le_path)
+        path_row.addWidget(self.btn_browse)
+        root.addLayout(path_row)
+
+        # --- Options ---
+        root.addSpacing(4)
+        root.addWidget(_header("OPTIONS"))
+        root.addWidget(_sep())
+
+        self.cb_include_bg = QtWidgets.QCheckBox("Include Background")
+        self.cb_include_bg.setChecked(True)
+        self.cb_include_ghost = QtWidgets.QCheckBox("Include Ghosting")
+        self.cb_include_ghost.setChecked(False)
+        root.addWidget(self.cb_include_bg)
+        root.addWidget(self.cb_include_ghost)
+
+        # --- Buttons ---
+        root.addSpacing(8)
+        root.addWidget(_sep())
+        btn_row = QtWidgets.QHBoxLayout()
+        btn_row.setSpacing(8)
+        btn_row.addStretch()
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.clicked.connect(self.reject)
+        self.btn_ok = QPushButton("Export")
+        self.btn_ok.setObjectName("primaryBtn")
+        self.btn_ok.clicked.connect(self.accept)
+        btn_row.addWidget(self.btn_cancel)
+        btn_row.addWidget(self.btn_ok)
+        root.addLayout(btn_row)
+
+    def _browsePath(self):
+        path, _ = QtWidgets.QFileDialog.getSaveFileName(
+            self, "Export Sequence", "", "PNG Files (*.png);;All Files (*)"
+        )
+        if path:
+            if not path.lower().endswith('.png'):
+                path += '.png'
+            self.le_path.setText(path)
+            self.export_path = path
+
+    def values(self):
+        start = self.sb_start.value()
+        end = self.sb_end.value()
+        if end < start:
+            start, end = end, start
+        return {
+            'start': start,
+            'end': end,
+            'path': self.le_path.text(),
+            'include_bg': self.cb_include_bg.isChecked(),
+            'include_ghost': self.cb_include_ghost.isChecked(),
         }
 
 
@@ -143,8 +953,8 @@ class AnimRef(QDockWidget):
         if isinstance(parent, QMainWindow):
             parent.addDockWidget(QtCore.Qt.RightDockWidgetArea, self)
         self.setFloating(True)
-        self.resize(1024, 720)
-        self.setWindowTitle("AnimRef v2.0")
+        self.resize(1860, 1280)
+        self.setWindowTitle("AnimRef Pro v1")
 
         self.defineVariables()
         self.defineSignals()
@@ -157,28 +967,152 @@ class AnimRef(QDockWidget):
         self._draw_flush_timer = QtCore.QTimer(self)
         self._draw_flush_timer.timeout.connect(self._flushDrawBuffer)
         self._draw_flush_timer.setInterval(16)
+        self._thumbnail_update_timer = QtCore.QTimer(self)
+        self._thumbnail_update_timer.timeout.connect(self._updateThumbnailFromMax)
+        self._thumbnail_update_timer.setInterval(100)
+        self._thumbnail_update_timer.start()
 
     def downloadConverter(self):
-
-        converter_path = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter',
-                                      'video_to_sequence.exe')
+        converter_dir = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter')
+        converter_path = os.path.join(converter_dir, 'video_to_sequence.exe')
         download_path = "https://raw.githubusercontent.com/ShirzadBh/AnimRef/main/AnimRef/Contents/converter/video_to_sequence.exe"
 
-        try:
-            urllib.request.urlretrieve(download_path, converter_path)
-            self.ui.state.setStyleSheet('''color : #98fc03;
+        message = "Downloading video_to_sequence.exe...\n\nThis may take a few minutes depending on your internet speed."
+        progress = QtWidgets.QProgressDialog(message, "Cancel", 0, 100, self)
+        progress.setWindowModality(QtCore.Qt.WindowModal)
+        progress.setWindowTitle("AnimRef - Download")
+        progress.setMinimumWidth(400)
+        progress.setStyleSheet(_themed("""
+            QProgressDialog {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+            }
+            QProgressDialog QLabel {
+                color: #e0e0e0;
                 font-size: 12px;
-                font-family:"Comic Sans MS", cursive, sans-serif;''')
+            }
+            QProgressBar {
+                border: 2px solid #4d4d4d;
+                border-radius: 4px;
+                background-color: #1a1a1a;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: %%ACCENT%%;
+                border-radius: 2px;
+            }
+            QPushButton {
+                background-color: #3a3a3a;
+                color: #e0e0e0;
+                border: 1px solid #4d4d4d;
+                border-radius: 4px;
+                padding: 6px 12px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: #4a4a4a;
+            }
+            QPushButton:pressed {
+                background-color: #2a2a2a;
+            }
+        """))
+        progress.show()
 
-            self.ui.state.setText("video_to_sequence.exe is ready!")
-            self.time_counting = True
-            self.startTime()
-        except:
+        class DownloadWorker(QtCore.QThread):
+            finished = QtCore.Signal(bool, str)
+            progress = QtCore.Signal(int)
+
+            def __init__(self, url, dest):
+                super().__init__()
+                self.url = url
+                self.dest = dest
+
+            def run(self):
+                max_retries = 5
+                for attempt in range(max_retries):
+                    try:
+                        os.makedirs(os.path.dirname(self.dest), exist_ok=True)
+                        # Try using requests library first if available
+                        try:
+                            import requests
+                            session = requests.Session()
+                            session.headers.update({'User-Agent': 'Mozilla/5.0'})
+                            response = session.get(self.url, stream=True, timeout=120)
+                            response.raise_for_status()
+                            total_size = int(response.headers.get('content-length', 0))
+                            chunk_size = 8192
+                            downloaded = 0
+                            with open(self.dest, 'wb') as f:
+                                for chunk in response.iter_content(chunk_size=chunk_size):
+                                    if chunk:
+                                        f.write(chunk)
+                                        downloaded += len(chunk)
+                                        if total_size > 0:
+                                            self.progress.emit(int(downloaded / total_size * 100))
+                            self.finished.emit(True, "")
+                            return
+                        except ImportError:
+                            # Fall back to urllib if requests not available
+                            req = urllib.request.Request(self.url, headers={'User-Agent': 'Mozilla/5.0'})
+                            with urllib.request.urlopen(req, timeout=120) as response:
+                                total_size = int(response.headers.get('Content-Length', 0))
+                                chunk_size = 8192
+                                downloaded = 0
+                                with open(self.dest, 'wb') as f:
+                                    while True:
+                                        chunk = response.read(chunk_size)
+                                        if not chunk:
+                                            break
+                                        f.write(chunk)
+                                        downloaded += len(chunk)
+                                        if total_size > 0:
+                                            self.progress.emit(int(downloaded / total_size * 100))
+                            self.finished.emit(True, "")
+                            return
+                    except (urllib.error.URLError, ConnectionResetError, TimeoutError, requests.exceptions.RequestException) as e:
+                        if attempt < max_retries - 1:
+                            # Wait before retry (exponential backoff)
+                            self.msleep(2000 * (2 ** attempt))
+                            continue
+                        error_msg = f"Connection error after {max_retries} attempts: {str(e)}"
+                        self.finished.emit(False, error_msg)
+                    except urllib.error.HTTPError as e:
+                        self.finished.emit(False, f"HTTP Error {e.code}: {e.reason}")
+                        return
+                    except Exception as e:
+                        self.finished.emit(False, str(e))
+                        return
+
+        self.download_worker = DownloadWorker(download_path, converter_path)
+        self.download_worker.finished.connect(lambda success, error: self._onDownloadComplete(success, error, progress))
+        self.download_worker.progress.connect(progress.setValue)
+        self.download_worker.start()
+
+    def _onDownloadComplete(self, success, error, progress):
+        progress.close()
+        if success:
+            # Verify the file was actually downloaded
+            converter_dir = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter')
+            converter_path = os.path.join(converter_dir, 'video_to_sequence.exe')
+            if os.path.exists(converter_path):
+                self.ui.state.setStyleSheet(f'''color : {ACCENT_COLOR};
+                    font-size: 12px;
+                    font-family:"Comic Sans MS", cursive, sans-serif;''')
+                self.ui.state.setText("video_to_sequence.exe is ready!")
+                self.time_counting = True
+                self.startTime()
+            else:
+                self.ui.state.setStyleSheet('''color : #fc5203;
+                    font-size: 12px;
+                    font-family:"Comic Sans MS", cursive, sans-serif;''')
+                self.ui.state.setText(f"Download completed but file not found at: {converter_path}")
+                self.time_counting = True
+                self.startTime()
+        else:
             self.ui.state.setStyleSheet('''color : #fc5203;
                 font-size: 12px;
                 font-family:"Comic Sans MS", cursive, sans-serif;''')
-
-            self.ui.state.setText("Download failed...")
+            self.ui.state.setText(f"Download failed: {error}")
             self.time_counting = True
             self.startTime()
 
@@ -188,17 +1122,47 @@ class AnimRef(QDockWidget):
         path = os.path.join(self.dir, 'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
         converterPath = os.path.join(self.dir, 'AnimRef', 'Contents', 'converter')
 
-        if os.path.exists(path):
-            subprocess.run([FILEBROWSER_PATH, converterPath])
-        else:
-            msgBox = QMessageBox()
-            msgBox.setText("Do You Want To Download video_to_sequence.exe")
-            msgBox.setWindowTitle("Sequence Converter")
-            msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-
-            returnValue = msgBox.exec()
-            if returnValue == QMessageBox.Ok:
+        # Debug: Check if file exists
+        if not os.path.exists(path):
+            # File doesn't exist, show download dialog
+            dlg = QtWidgets.QDialog(self)
+            dlg.setWindowTitle("Sequence Converter")
+            dlg.setMinimumWidth(360)
+            dlg.setStyleSheet(ANIMREF_DIALOG_STYLESHEET)
+            layout = QtWidgets.QVBoxLayout(dlg)
+            layout.setContentsMargins(24, 24, 24, 20)
+            layout.setSpacing(16)
+            msg = QLabel("The video converter is not installed.\nWould you like to download it now?")
+            msg.setWordWrap(True)
+            layout.addWidget(msg)
+            f = QtWidgets.QFrame()
+            f.setObjectName("separator")
+            f.setFrameShape(QtWidgets.QFrame.HLine)
+            layout.addWidget(f)
+            btn_row = QtWidgets.QHBoxLayout()
+            btn_row.setSpacing(8)
+            btn_row.addStretch()
+            btn_cancel = QPushButton("Cancel")
+            btn_cancel.clicked.connect(dlg.reject)
+            btn_download = QPushButton("Download")
+            btn_download.setObjectName("primaryBtn")
+            btn_download.clicked.connect(dlg.accept)
+            btn_row.addWidget(btn_cancel)
+            btn_row.addWidget(btn_download)
+            layout.addLayout(btn_row)
+            if dlg.exec() == QtWidgets.QDialog.Accepted:
                 self.downloadConverter()
+        else:
+            # File exists, open folder
+            try:
+                subprocess.run([FILEBROWSER_PATH, converterPath], check=True)
+            except Exception as e:
+                self.ui.state.setStyleSheet('''color : #fc5203;
+                    font-size: 12px;
+                    font-family:"Comic Sans MS", cursive, sans-serif;''')
+                self.ui.state.setText(f"Failed to open folder: {str(e)}")
+                self.time_counting = True
+                self.startTime()
 
     def startTime(self):
         if self.time_counting:
@@ -228,7 +1192,104 @@ class AnimRef(QDockWidget):
         self.setWidget(self.ui)
         self.ui.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
+    def _embedSliderLabel(self, slider, title):
+        layout = QtWidgets.QHBoxLayout(slider)
+        layout.setContentsMargins(8, 0, 8, 0)
+        layout.setSpacing(0)
+        title_lbl = QLabel(title, slider)
+        title_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        title_lbl.setStyleSheet("background: transparent; color: #e0e0e0;")
+        value_lbl = QLabel("", slider)
+        value_lbl.setAttribute(QtCore.Qt.WA_TransparentForMouseEvents)
+        value_lbl.setStyleSheet("background: transparent; color: #e0e0e0;")
+        value_lbl.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        layout.addWidget(title_lbl)
+        layout.addStretch()
+        layout.addWidget(value_lbl)
+        return value_lbl
+
+    def _setupSliderLabels(self):
+        self.ui.lbl_size_val = self._embedSliderLabel(self.ui.sl_brush_size, "Size")
+        self.ui.lbl_flow_val = self._embedSliderLabel(self.ui.sl_brush_flow, "Opacity")
+        self.ui.lbl_opacity_val = self._embedSliderLabel(self.ui.sl_opacity, "Window")
+        self.ui.lbl_layer_opacity_val = self._embedSliderLabel(self.ui.sl_layer_opacity, "Opacity")
+        self.ui.lbl_size_val.setText(f"{self.ui.sl_brush_size.value()} px")
+        self.ui.lbl_flow_val.setText(f"{self.ui.sl_brush_flow.value()}%")
+        self.ui.lbl_opacity_val.setText(f"{self.ui.sl_opacity.value()}%")
+        self.ui.lbl_layer_opacity_val.setText(f"{self.ui.sl_layer_opacity.value()}%")
+
+    def _setupThumbnailStrip(self):
+        self.thumbnail_strip = ThumbnailStrip(self.ui)
+        self.thumbnail_strip.setEnabled(True)
+        self.thumbnail_strip.setToolTip("Click to jump to frame")
+        viewer_col = self.ui.findChild(QtWidgets.QVBoxLayout, 'viewerColumn')
+        if viewer_col is not None:
+            viewer_col.insertWidget(1, self.thumbnail_strip)
+        self.thumbnail_strip.frameClicked.connect(self._onThumbnailClicked)
+
+    def _onThumbnailClicked(self, frame_index):
+        if not self.isLoaded:
+            return
+        target_time = self.time_shift + frame_index
+        mxs.execute(f"sliderTime = {target_time}")
+        self.thumbnail_strip.setCurrentFrame(frame_index)
+        self.changeTime()
+
+    def _setupRangeSlider(self):
+        self.range_slider = RangeSlider(self.ui)
+        self.range_slider.setEnabled(False)
+        self.range_slider.setToolTip("Playback range")
+        viewer_col = self.ui.findChild(QtWidgets.QVBoxLayout, 'viewerColumn')
+        if viewer_col is not None:
+            viewer_col.insertWidget(2, self.range_slider)
+        self.range_slider.rangeChanged.connect(self._onPlaybackRangeChanged)
+
+    def _onPlaybackRangeChanged(self, low, high):
+        if not self.isLoaded:
+            return
+        if high <= low:
+            high = low + 1
+        mxs.animationRange = mxs.interval(low, high)
+
+    def _updateRangeBounds(self):
+        if not self.isLoaded or self.last_frame == 0:
+            self.range_slider.setEnabled(False)
+            return
+        start = self.time_shift
+        end = self.time_shift + self.last_frame - 1
+        self.range_slider.setEnabled(True)
+        self.range_slider.setBounds(start, end)
+        self.range_slider.setValues(start, end)
+
+    def _updateThumbnailStrip(self):
+        if not self.isLoaded or self.last_frame == 0:
+            self.thumbnail_strip.setEnabled(False)
+            self.thumbnail_strip.setImages([])
+            self.thumbnail_strip.setCurrentFrame(-1)
+            return
+        # Use base images directly for thumbnails during load (no layer compositing)
+        # This is much faster for large sequences. Thumbnails get updated with overlays
+        # as you paint on them via _refreshViewer.
+        image_list = [self.images[i] for i in range(self.last_frame)]
+        self.thumbnail_strip.setEnabled(True)
+        self.thumbnail_strip.setImages(image_list)
+        self.thumbnail_strip.setCurrentFrame(0)
+
+    def _updateThumbnailFromMax(self):
+        if not self.isLoaded or not hasattr(self, 'thumbnail_strip'):
+            return
+        try:
+            frame = int(mxs.currentTime) - self.time_shift
+            if frame >= 0 and frame < self.last_frame:
+                self.thumbnail_strip.setCurrentFrame(frame)
+        except (ValueError, AttributeError):
+            pass
+
     def start(self):
+        self.ui.setStyleSheet(ANIMREF_MAIN_STYLESHEET)
+        self._setupSliderLabels()
+        self._setupThumbnailStrip()
+        self._setupRangeSlider()
         self.ui.viewer.setAlignment(QtCore.Qt.AlignCenter)
         self.pixmap = self.no_image.scaled(400, 200, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
         self.ui.viewer.setPixmap(self.pixmap)
@@ -238,6 +1299,7 @@ class AnimRef(QDockWidget):
         self.ui.lw_layers.installEventFilter(self)
         self.ui.lw_layers.viewport().installEventFilter(self)
         self.ui.lw_layers.setIconSize(QtCore.QSize(20, 20))
+        self.ui.lw_layers.setSelectionMode(QtWidgets.QListWidget.SingleSelection)
         self._setupBrushCursor()
         mxs.registerTimeCallback(self.changeTime)
 
@@ -274,7 +1336,6 @@ class AnimRef(QDockWidget):
         if lbl is not None:
             lbl.setText(f"{self.brush_size} px")
         self._regenerateCursorPixmap()
-
     def changeBrushFlow(self):
         flow_slider = getattr(self.ui, 'sl_brush_flow', None)
         if flow_slider is not None:
@@ -302,13 +1363,17 @@ class AnimRef(QDockWidget):
         self._layer_undo_stacks = []
         self._layer_redo_stacks = []
         self._scaled_bases = {}
-        self.ghost_frames = self.ui.sb_ghosting.value()
+        self.ghost_forward = 0
+        self.ghost_backward = 0
         self.opacity = 1
         self.images_path = None
         self.last_frame = 0
         self.previous_frame = 0
-        self.no_image = QtGui.QPixmap(
-            os.path.join(os.path.dirname(os.path.realpath(__file__)) + "\\icons\\no_data.png"))
+        if DEV:
+            no_data_path = r"C:\Users\cgcen\Documents\GitHub\AnimRef\AnimRef\Contents\icons\no_data.png"
+        else:
+            no_data_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'no_data.png')
+        self.no_image = QtGui.QPixmap(no_data_path)
         self.drawing = False
         self._tablet_drawing = False
         self.last_draw_pos = None
@@ -327,6 +1392,7 @@ class AnimRef(QDockWidget):
 
     def defineSignals(self):
         self.ui.btn_converter.clicked.connect(self.convertedExist)
+        self.ui.btn_export.clicked.connect(self.exportLayers)
 
         # self.ui.timeSlider.valueChanged.connect(self.goToFrame)
         self.ui.sl_opacity.valueChanged.connect(self.changeOpacity)
@@ -335,7 +1401,10 @@ class AnimRef(QDockWidget):
         if new_seq_btn is not None:
             new_seq_btn.clicked.connect(self.new_seq)
         self.ui.sb_time_shift.valueChanged.connect(self.updateTimeShift)
-        self.ui.sb_ghosting.valueChanged.connect(self.updateGhosting)
+        self.ui.sb_ghost_forward.valueChanged.connect(self.updateGhosting)
+        self.ui.sb_ghost_backward.valueChanged.connect(self.updateGhosting)
+        self.ui.btn_ghosting.toggled.connect(self.toggleGhosting)
+        self.ui.sl_layer_opacity.valueChanged.connect(self.changeLayerOpacity)
         self.ui.btn_n_frame.clicked.connect(self.nextFrame)
         self.ui.btn_p_frame.clicked.connect(self.previousFrame)
         self.ui.btn_play.clicked.connect(self.playFrame)
@@ -402,7 +1471,7 @@ class AnimRef(QDockWidget):
     def startFrame(self):
         # mxs.execute("max time start")
         mxs.stopAnimation()
-        mxs.sliderTime = self.time_shift
+        mxs.sliderTime = self.range_slider.values()[0] if self.range_slider.isEnabled() else self.time_shift
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_play.setChecked(False)
         self.ui.sb_time_shift.setEnabled(True)
@@ -410,17 +1479,40 @@ class AnimRef(QDockWidget):
     def endFrame(self):
         # mxs.execute("max time end")
         mxs.stopAnimation()
-        mxs.sliderTime = self.time_shift + (self.last_frame - 1)
+        mxs.sliderTime = self.range_slider.values()[1] if self.range_slider.isEnabled() else self.time_shift + (self.last_frame - 1)
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_play.setChecked(False)
         self.ui.sb_time_shift.setEnabled(True)
 
+    def toggleGhosting(self, checked):
+        self.ui.sb_ghost_forward.setEnabled(checked)
+        self.ui.sb_ghost_backward.setEnabled(checked)
+        if checked:
+            self.ghost_forward = self.ui.sb_ghost_forward.value()
+            self.ghost_backward = self.ui.sb_ghost_backward.value()
+        else:
+            self.ghost_forward = 0
+            self.ghost_backward = 0
+        self.changeTime()
+
+    def changeLayerOpacity(self):
+        lbl = getattr(self.ui, 'lbl_layer_opacity_val', None)
+        if lbl is not None:
+            lbl.setText(f"{self.ui.sl_layer_opacity.value()}%")
+        if 0 <= self.active_layer < len(self.layers):
+            self.layers[self.active_layer]['opacity'] = self.ui.sl_layer_opacity.value() / 100.0
+            self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
     def updateGhosting(self):
-        self.ghost_frames = self.ui.sb_ghosting.value()
+        if self.ui.btn_ghosting.isChecked():
+            self.ghost_forward = self.ui.sb_ghost_forward.value()
+            self.ghost_backward = self.ui.sb_ghost_backward.value()
         self.changeTime()
 
     def updateTimeShift(self):
         self.time_shift = self.ui.sb_time_shift.value()
+        if self.isLoaded:
+            self._updateRangeBounds()
         self.changeTime()
 
     def load_seq(self):
@@ -453,6 +1545,8 @@ class AnimRef(QDockWidget):
                 self.ui.btn_e_frame.setEnabled(True)
                 self.ui.sb_time_shift.setEnabled(True)
                 self.ui.btn_loop.setEnabled(True)
+                self._updateRangeBounds()
+                self._updateThumbnailStrip()
                 self.status_1()
                 self.changeTime()
 
@@ -460,7 +1554,7 @@ class AnimRef(QDockWidget):
                 self.status_3()
                 self.changeTime()
 
-        except:
+        except (IndexError, KeyError, AttributeError):
             self.status_3()
             self.changeTime()
 
@@ -478,7 +1572,10 @@ class AnimRef(QDockWidget):
         self.images = {}
         self.images_path = None
         blank = QtGui.QPixmap(opts['width'], opts['height'])
-        blank.fill(opts['color'])
+        if opts['transparent']:
+            blank.fill(QtCore.Qt.transparent)
+        else:
+            blank.fill(opts['color'])
         for i in range(frame_count):
             self.images[i] = blank
 
@@ -495,33 +1592,58 @@ class AnimRef(QDockWidget):
         self.ui.btn_e_frame.setEnabled(True)
         self.ui.sb_time_shift.setEnabled(True)
         self.ui.btn_loop.setEnabled(True)
+        self._updateRangeBounds()
+        self._updateThumbnailStrip()
         self.status_1()
         self.changeTime()
+
+    def _checkerBrush(self):
+        if getattr(self, '_checker_brush', None) is None:
+            tile = QtGui.QPixmap(24, 24)
+            tile.fill(QtGui.QColor("#2a2a2a"))
+            p = QtGui.QPainter(tile)
+            p.fillRect(0, 0, 12, 12, QtGui.QColor("#333333"))
+            p.fillRect(12, 12, 12, 12, QtGui.QColor("#333333"))
+            p.end()
+            self._checker_brush = QtGui.QBrush(tile)
+        return self._checker_brush
 
     def _getScaledBase(self, frame):
         key = (frame, self.width, self.height)
         if key not in self._scaled_bases:
-            self._scaled_bases[key] = self.images[frame].scaled(
+            scaled = self.images[frame].scaled(
                 self.width, self.height, QtCore.Qt.KeepAspectRatio, QtCore.Qt.FastTransformation)
+            result = QtGui.QPixmap(scaled.size())
+            result.fill(QtCore.Qt.transparent)
+            painter = QtGui.QPainter(result)
+            if self.images[frame].hasAlphaChannel():
+                painter.fillRect(result.rect(), self._checkerBrush())
+            painter.drawPixmap(0, 0, scaled)
+            pen = QtGui.QPen(QtGui.QColor("#4d4d4d"))
+            pen.setWidth(1)
+            painter.setPen(pen)
+            painter.drawRect(result.rect().adjusted(0, 0, -1, -1))
+            painter.end()
+            self._scaled_bases[key] = result
         return self._scaled_bases[key]
 
     def changeTime(self):
         if self.isLoaded:
 
-            self.ui.maxframe.setText(str(int(mxs.currentTime)))
-            self.ui.refframe.setText(str(int(mxs.currentTime) - self.time_shift))
+            current_time = int(mxs.currentTime)
+            self.ui.maxframe.setText(str(current_time))
+            self.ui.refframe.setText(str(current_time - self.time_shift))
 
             try:
-                frame = int(mxs.currentTime) - self.time_shift
+                frame = current_time - self.time_shift
                 base = self._getScaledBase(frame)
                 self.pixmap = self._compositeOverlay(base, frame)
                 self.ui.viewer.setPixmap(self.pixmap)
-                self.ui.viewer.repaint()
-                self.ui.maxframe.setText(str(int(mxs.currentTime)))
-                self.ui.refframe.setText(str(int(mxs.currentTime) - self.time_shift))
+                self.ui.maxframe.setText(str(current_time))
+                self.ui.refframe.setText(str(current_time - self.time_shift))
                 self.out_of_range = False
-                self.last_valid_frame = int(mxs.currentTime) - self.time_shift
-            except:
+                self.last_valid_frame = current_time - self.time_shift
+            except (IndexError, KeyError, AttributeError):
                 out = True
                 is_playing = mxs.isAnimPlaying()
                 if self.isLoaded and not self.ui.btn_loop.isChecked():
@@ -561,6 +1683,7 @@ class AnimRef(QDockWidget):
         self.delete_layer_icon = QtGui.QIcon(os.path.join(icons_dir, 'delete_layer.png'))
         self.show_icon = QtGui.QIcon(os.path.join(icons_dir, 'show.png'))
         self.hide_icon = QtGui.QIcon(os.path.join(icons_dir, 'hide.png'))
+        self.ghost_icon = QtGui.QIcon(os.path.join(icons_dir, 'ghost.png'))
 
         self.ui.btn_play.setIcon(self.play_icon)
         self.ui.btn_n_frame.setIcon(self.n_frame_icon)
@@ -579,6 +1702,8 @@ class AnimRef(QDockWidget):
         self.ui.btn_eraser.setIcon(self.eraser_icon)
         self.ui.btn_add_layer.setIcon(self.new_layer_icon)
         self.ui.btn_remove_layer.setIcon(self.delete_layer_icon)
+        self.ui.btn_ghosting.setIcon(self.ghost_icon)
+        self.ui.btn_export.setIcon(self.seq_icon)
 
     def wheelEvent(self, event):
         if self.isLoaded:
@@ -600,14 +1725,21 @@ class AnimRef(QDockWidget):
         elif obj is self.ui.lw_layers.viewport() and event.type() == QtCore.QEvent.Type.MouseButtonPress:
             pos = event.position().toPoint()
             item = self.ui.lw_layers.itemAt(pos)
-            if item is not None and pos.x() <= 36:
-                self._toggleLayerVisibility(self.ui.lw_layers.row(item))
-                return True
+            if item is not None:
+                if pos.x() <= 36:
+                    self._toggleLayerVisibility(self.ui.lw_layers.row(item))
+                    return True
+                elif event.button() == QtCore.Qt.RightButton:
+                    self._showLayerContextMenu(self.ui.lw_layers.row(item), event.globalPosition().toPoint())
+                    return True
         return super().eventFilter(obj, event)
 
     def closeEvent(self, event):
         mxs.unregisterTimeCallback(self.changeTime)
-        self.timer.stop()
+        if hasattr(self, 'timer'):
+            self.timer.stop()
+        if hasattr(self, '_thumbnail_update_timer'):
+            self._thumbnail_update_timer.stop()
 
     def updateFrame(self):
         if self.isLoaded:
@@ -637,49 +1769,142 @@ class AnimRef(QDockWidget):
             pm = QtGui.QPixmap(w, h)
             pm.fill(QtCore.Qt.transparent)
             overlays[i] = pm
-        self.layers.append({'name': 'default', 'overlays': overlays, 'visible': True})
+        self.layers.append({'name': 'default', 'overlays': overlays, 'visible': True, 'opacity': 1.0, 'painted': set()})
         self._layer_undo_stacks.append({i: [] for i in range(self.last_frame)})
         self._layer_redo_stacks.append({i: [] for i in range(self.last_frame)})
         self._overlay_ratio = ratio
 
-    def _drawLayersForFrame(self, painter, result, frame_index):
+    def _drawLayersForFrame(self, painter, result, frame_index, base_opacity=1.0):
+        result_w, result_h = result.width(), result.height()
         for layer in self.layers:
             if not layer.get('visible', True):
                 continue
+            painted = layer.get('painted')
+            if painted is not None and frame_index not in painted:
+                continue
+            layer_opacity = layer.get('opacity', 1.0)
+            combined_opacity = layer_opacity * base_opacity
+            if combined_opacity < 1.0:
+                painter.setOpacity(combined_opacity)
             overlay = layer['overlays'].get(frame_index)
             if overlay and not overlay.isNull():
-                scaled_overlay = overlay.scaled(result.width(), result.height(),
-                                                QtCore.Qt.KeepAspectRatio,
-                                                QtCore.Qt.FastTransformation)
-                painter.drawPixmap(0, 0, scaled_overlay)
+                # Cache scaled overlays to avoid repeated scaling
+                cache_key = (result_w, result_h)
+                scaled_cache = layer.setdefault('_scaled_cache', {})
+                if cache_key not in scaled_cache:
+                    scaled_cache[cache_key] = {}
+                if frame_index not in scaled_cache[cache_key]:
+                    scaled_cache[cache_key][frame_index] = overlay.scaled(
+                        result_w, result_h,
+                        QtCore.Qt.KeepAspectRatio,
+                        QtCore.Qt.FastTransformation
+                    )
+                painter.drawPixmap(0, 0, scaled_cache[cache_key][frame_index])
+            if combined_opacity < 1.0:
+                painter.setOpacity(1.0)
 
-    def _compositeOverlay(self, base_pixmap, frame_index):
+    def _compositeOverlay(self, base_pixmap, frame_index, include_ghosting=True):
         result = QtGui.QPixmap(base_pixmap)
         painter = QtGui.QPainter(result)
-        ghost = getattr(self, 'ghost_frames', 0)
-        if ghost > 0:
-            for offset in range(ghost, 0, -1):
-                painter.setOpacity(0.5 / offset)
-                for f in (frame_index - offset, frame_index + offset):
+        if include_ghosting:
+            ghost_backward = getattr(self, 'ghost_backward', 0)
+            ghost_forward = getattr(self, 'ghost_forward', 0)
+            if ghost_backward > 0:
+                for offset in range(1, ghost_backward + 1):
+                    ghost_opacity = 0.5 / offset
+                    f = frame_index - offset
                     if 0 <= f < self.last_frame:
-                        self._drawLayersForFrame(painter, result, f)
-            painter.setOpacity(1.0)
+                        self._drawLayersForFrame(painter, result, f, ghost_opacity)
+            if ghost_forward > 0:
+                for offset in range(1, ghost_forward + 1):
+                    ghost_opacity = 0.5 / offset
+                    f = frame_index + offset
+                    if 0 <= f < self.last_frame:
+                        self._drawLayersForFrame(painter, result, f, ghost_opacity)
         self._drawLayersForFrame(painter, result, frame_index)
         painter.end()
         return result
 
-    def _refreshViewer(self, frame):
+    def _compositeForExport(self, frame_index, include_bg, include_ghost, ghost_forward, ghost_backward):
+        if include_bg and frame_index in self.images:
+            base = self.images[frame_index]
+        else:
+            if not self.images:
+                return None
+            first_frame = next(iter(self.images.values()))
+            base = QtGui.QPixmap(first_frame.size())
+            base.fill(QtCore.Qt.transparent)
+        result = QtGui.QPixmap(base)
+        painter = QtGui.QPainter(result)
+        if include_ghost:
+            if ghost_backward > 0:
+                for offset in range(1, ghost_backward + 1):
+                    ghost_opacity = 0.5 / offset
+                    f = frame_index - offset
+                    if 0 <= f < self.last_frame:
+                        self._drawLayersForFrame(painter, result, f, ghost_opacity)
+            if ghost_forward > 0:
+                for offset in range(1, ghost_forward + 1):
+                    ghost_opacity = 0.5 / offset
+                    f = frame_index + offset
+                    if 0 <= f < self.last_frame:
+                        self._drawLayersForFrame(painter, result, f, ghost_opacity)
+        self._drawLayersForFrame(painter, result, frame_index)
+        painter.end()
+        return result
+
+    def exportLayers(self):
+        if not self.isLoaded:
+            self.status_3()
+            return
+        dialog = ExportDialog(self, self.last_frame, self.time_shift)
+        if dialog.exec() != QDialog.Accepted:
+            return
+        opts = dialog.values()
+        if not opts['path']:
+            self.status_3()
+            return
+        ghost_forward = self.ui.sb_ghost_forward.value() if opts['include_ghost'] else 0
+        ghost_backward = self.ui.sb_ghost_backward.value() if opts['include_ghost'] else 0
+        base_path = opts['path']
+        if base_path.lower().endswith('.png'):
+            base_path = base_path[:-4]
+        start_frame = opts['start'] - self.time_shift
+        end_frame = opts['end'] - self.time_shift
+        if start_frame < 0:
+            start_frame = 0
+        if end_frame >= self.last_frame:
+            end_frame = self.last_frame - 1
+        for i in range(start_frame, end_frame + 1):
+            if i not in self.images:
+                continue
+            pm = self._compositeForExport(i, opts['include_bg'], opts['include_ghost'], ghost_forward, ghost_backward)
+            if pm is None:
+                continue
+            frame_path = f"{base_path}_{i:04d}.png"
+            pm.save(frame_path, "PNG")
+        self.status_1()
+
+    def _refreshViewer(self, frame, update_thumb=True):
         if frame < 0 or frame >= self.last_frame or frame not in self.images:
             return
         base = self._getScaledBase(frame)
         self.pixmap = self._compositeOverlay(base, frame)
         self.ui.viewer.setPixmap(self.pixmap)
         self.ui.viewer.repaint()
+        if update_thumb:
+            thumb_pixmap = self._compositeOverlay(self.images[frame], frame, include_ghosting=False)
+            self.thumbnail_strip.updateThumbnail(frame, thumb_pixmap)
 
     def _batchDrawOnOverlay(self, points):
         frame = self._draw_frame
         if frame is None or frame < 0 or frame >= self.last_frame or frame not in self.images:
             return
+        if 0 <= self.active_layer < len(self.layers):
+            self.layers[self.active_layer].setdefault('painted', set()).add(frame)
+            # Clear scaled cache when overlay is modified
+            if '_scaled_cache' in self.layers[self.active_layer]:
+                self.layers[self.active_layer]['_scaled_cache'].clear()
         if not self.layers or self.active_layer < 0:
             return
         overlay = self.layers[self.active_layer]['overlays'][frame]
@@ -760,7 +1985,7 @@ class AnimRef(QDockWidget):
             self._draw_buffer = []
             return
         self._batchDrawOnOverlay(self._draw_buffer)
-        self._refreshViewer(self._draw_frame)
+        self._refreshViewer(self._draw_frame, update_thumb=False)
         self._draw_buffer = [self._draw_buffer[-1]]
 
     def tabletEvent(self, event):
@@ -780,7 +2005,7 @@ class AnimRef(QDockWidget):
         pressure = event.pressure()
         etype = event.type()
         if etype == QtCore.QEvent.Type.TabletPress:
-            if not self.layers or self.active_layer < 0:
+            if not self._canDraw():
                 event.accept()
                 return
             self.drawing = True
@@ -806,7 +2031,7 @@ class AnimRef(QDockWidget):
                 self._draw_flush_timer.stop()
                 if len(self._draw_buffer) >= 2:
                     self._batchDrawOnOverlay(self._draw_buffer)
-                    self._refreshViewer(self._draw_frame)
+                    self._refreshViewer(self._draw_frame, update_thumb=True)
                 self._draw_buffer = []
                 self.last_draw_pos = None
                 self._draw_frame = None
@@ -816,7 +2041,7 @@ class AnimRef(QDockWidget):
         if self._tablet_drawing:
             return
         if event.button() == QtCore.Qt.LeftButton and self.isLoaded:
-            if not self.layers or self.active_layer < 0:
+            if not self._canDraw():
                 return
             self.drawing = True
             self._draw_frame = int(mxs.currentTime) - self.time_shift
@@ -848,7 +2073,7 @@ class AnimRef(QDockWidget):
             self._draw_flush_timer.stop()
             if len(self._draw_buffer) >= 2:
                 self._batchDrawOnOverlay(self._draw_buffer)
-                self._refreshViewer(self._draw_frame)
+                self._refreshViewer(self._draw_frame, update_thumb=True)
             self._draw_buffer = []
             self.last_draw_pos = None
             self._draw_frame = None
@@ -889,11 +2114,10 @@ class AnimRef(QDockWidget):
             pm.fill(QtCore.Qt.transparent)
             overlays[i] = pm
         default_name = f"Layer {len(self.layers) + 1}"
-        name, ok = QInputDialog.getText(self, 'New Layer', 'Layer name:', text=default_name)
-        if not ok:
+        name = self._promptLayerName("New Layer", default_name)
+        if name is None:
             return
-        name = name.strip() or default_name
-        self.layers.append({'name': name, 'overlays': overlays, 'visible': True})
+        self.layers.append({'name': name, 'overlays': overlays, 'visible': True, 'opacity': 1.0, 'painted': set()})
         self._layer_undo_stacks.append({i: [] for i in range(self.last_frame)})
         self._layer_redo_stacks.append({i: [] for i in range(self.last_frame)})
         self._updateLayersList()
@@ -930,17 +2154,73 @@ class AnimRef(QDockWidget):
             row = lw_layers.currentRow()
             if 0 <= row < len(self.layers):
                 self.active_layer = row
+                self.ui.sl_layer_opacity.blockSignals(True)
+                self.ui.sl_layer_opacity.setValue(int(self.layers[self.active_layer].get('opacity', 1.0) * 100))
+                self.ui.sl_layer_opacity.blockSignals(False)
+                lbl = getattr(self.ui, 'lbl_layer_opacity_val', None)
+                if lbl is not None:
+                    lbl.setText(f"{self.ui.sl_layer_opacity.value()}%")
+                self._updateLayerStyling()
         self._regenerateCursorPixmap()
+
+    def _updateLayerStyling(self):
+        lw_layers = getattr(self.ui, 'lw_layers', None)
+        if lw_layers is None:
+            return
+        lw_layers.blockSignals(True)
+        for i in range(lw_layers.count()):
+            item = lw_layers.item(i)
+            if item is not None:
+                if i == self.active_layer:
+                    item.setSelected(True)
+                    item.setBackground(QtGui.QColor("#3a3a3a"))
+                    item.setForeground(QtGui.QColor(ACCENT_COLOR))
+                else:
+                    item.setSelected(False)
+                    item.setBackground(QtGui.QColor("#2a2a2a"))
+                    item.setForeground(QtGui.QColor("#e0e0e0"))
+        lw_layers.blockSignals(False)
+
+    def _promptLayerName(self, title, default=""):
+        dialog = QtWidgets.QDialog(self)
+        dialog.setWindowTitle(title)
+        dialog.setMinimumWidth(320)
+        dialog.setStyleSheet(ANIMREF_DIALOG_STYLESHEET)
+        layout = QtWidgets.QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 20, 20, 16)
+        layout.setSpacing(10)
+        layout.addWidget(QLabel("Layer name:"))
+        name_input = QtWidgets.QLineEdit(default)
+        layout.addWidget(name_input)
+        f = QtWidgets.QFrame()
+        f.setObjectName("separator")
+        f.setFrameShape(QtWidgets.QFrame.HLine)
+        layout.addWidget(f)
+        btn_row = QtWidgets.QHBoxLayout()
+        btn_row.setSpacing(8)
+        btn_row.addStretch()
+        btn_cancel = QPushButton("Cancel")
+        btn_cancel.clicked.connect(dialog.reject)
+        btn_ok = QPushButton("OK")
+        btn_ok.setObjectName("primaryBtn")
+        btn_ok.clicked.connect(dialog.accept)
+        btn_row.addWidget(btn_cancel)
+        btn_row.addWidget(btn_ok)
+        layout.addLayout(btn_row)
+        name_input.selectAll()
+        if dialog.exec() == QtWidgets.QDialog.Accepted:
+            return name_input.text().strip() or default
+        return None
 
     def renameLayer(self, item):
         row = self.ui.lw_layers.row(item)
         if row < 0 or row >= len(self.layers):
             return
         old_name = self.layers[row]['name']
-        new_name, ok = QInputDialog.getText(self, 'Rename Layer', 'Layer name:', text=old_name)
-        if ok and new_name.strip():
-            self.layers[row]['name'] = new_name.strip()
-            item.setText(new_name.strip())
+        new_name = self._promptLayerName("Rename Layer", old_name)
+        if new_name:
+            self.layers[row]['name'] = new_name
+            item.setText(new_name)
 
     def _updateLayersList(self):
         lw_layers = getattr(self.ui, 'lw_layers', None)
@@ -953,6 +2233,7 @@ class AnimRef(QDockWidget):
             item = QtWidgets.QListWidgetItem(icon, layer['name'])
             item.setData(QtCore.Qt.UserRole, i)
             lw_layers.addItem(item)
+        self._updateLayerStyling()
         self._syncing_layers = False
 
     def _toggleLayerVisibility(self, row):
@@ -964,6 +2245,98 @@ class AnimRef(QDockWidget):
         if item is not None:
             item.setIcon(self.show_icon if layer['visible'] else self.hide_icon)
         self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
+    def _showLayerContextMenu(self, row, global_pos):
+        if row < 0 or row >= len(self.layers):
+            return
+        menu = QtWidgets.QMenu(self)
+        menu.setStyleSheet(_themed("""
+            QMenu {
+                background-color: #2a2a2a;
+                color: #e0e0e0;
+                border: 1px solid #4d4d4d;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 20px;
+                border-radius: 3px;
+            }
+            QMenu::item:selected {
+                background-color: %%ACCENT%%;
+                color: #2a2a2a;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #4d4d4d;
+                margin: 4px 8px;
+            }
+        """))
+        clear_action = menu.addAction("Clear Layer")
+        clear_all_action = menu.addAction("Clear All Layers")
+        menu.addSeparator()
+        merge_action = menu.addAction("Merge Selected Layers")
+        action = menu.exec(global_pos)
+        if action == clear_action:
+            self.clearLayer(row)
+        elif action == clear_all_action:
+            self.clearAllLayers()
+        elif action == merge_action:
+            self.mergeSelectedLayers()
+
+    def clearLayer(self, row):
+        if row < 0 or row >= len(self.layers):
+            return
+        layer = self.layers[row]
+        for frame in layer['overlays']:
+            layer['overlays'][frame].fill(QtCore.Qt.transparent)
+        layer['painted'] = set()
+        self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
+    def clearAllLayers(self):
+        for layer in self.layers:
+            for frame in layer['overlays']:
+                layer['overlays'][frame].fill(QtCore.Qt.transparent)
+            layer['painted'] = set()
+        self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
+    def mergeSelectedLayers(self):
+        lw = self.ui.lw_layers
+        selected = [lw.item(i).data(QtCore.Qt.UserRole) for i in range(lw.count()) if lw.item(i).isSelected()]
+        if len(selected) < 2:
+            return
+        selected.sort(reverse=True)
+        target_idx = selected[-1]
+        target_layer = self.layers[target_idx]
+        for idx in selected[:-1]:
+            source_layer = self.layers[idx]
+            for frame in source_layer['overlays']:
+                src = source_layer['overlays'][frame]
+                if src.isNull():
+                    continue
+                dst = target_layer['overlays'].get(frame)
+                if dst is None or dst.isNull():
+                    continue
+                painter = QtGui.QPainter(dst)
+                painter.drawPixmap(0, 0, src)
+                painter.end()
+            target_layer.setdefault('painted', set()).update(source_layer.get('painted', set()))
+        for idx in selected[:-1]:
+            self.removeLayerByIndex(idx)
+        self._updateLayersList()
+        lw.setCurrentRow(target_idx)
+        self.setActiveLayer()
+        self._refreshViewer(int(mxs.currentTime) - self.time_shift)
+
+    def removeLayerByIndex(self, idx):
+        if idx < 0 or idx >= len(self.layers):
+            return
+        del self.layers[idx]
+        del self._layer_undo_stacks[idx]
+        del self._layer_redo_stacks[idx]
+        if self.active_layer == idx:
+            self.active_layer = -1
+        elif self.active_layer > idx:
+            self.active_layer -= 1
 
     def _onLayersReordered(self, *args):
         if getattr(self, '_syncing_layers', False):
@@ -999,6 +2372,10 @@ class AnimRef(QDockWidget):
         if self._cursor_label is None:
             return
         visual_size = self._getVisualBrushSize()
+        cursor_key = (visual_size, self.is_eraser, self.brush_color.rgba(), self.brush_flow)
+        if getattr(self, '_last_cursor_key', None) == cursor_key:
+            return
+        self._last_cursor_key = cursor_key
         multiplier = 2 if self.is_eraser else 1
         diameter = max(4, visual_size * multiplier)
         size = diameter + 8
@@ -1077,6 +2454,9 @@ class AnimRef(QDockWidget):
         if current is not None and not current.isNull():
             self._layer_redo_stacks[self.active_layer][frame].append(current.copy())
         self.layers[self.active_layer]['overlays'][frame] = stack.pop()
+        self.layers[self.active_layer].setdefault('painted', set()).add(frame)
+        if '_scaled_cache' in self.layers[self.active_layer]:
+            self.layers[self.active_layer]['_scaled_cache'].clear()
         self._refreshViewer(frame)
 
     def redo(self):
@@ -1092,11 +2472,27 @@ class AnimRef(QDockWidget):
         if current is not None and not current.isNull():
             self._layer_undo_stacks[self.active_layer][frame].append(current.copy())
         self.layers[self.active_layer]['overlays'][frame] = stack.pop()
+        self.layers[self.active_layer].setdefault('painted', set()).add(frame)
+        if '_scaled_cache' in self.layers[self.active_layer]:
+            self.layers[self.active_layer]['_scaled_cache'].clear()
         self._refreshViewer(frame)
+
+    def _canDraw(self):
+        if not self.layers or self.active_layer < 0:
+            return False
+        if not self.layers[self.active_layer].get('visible', True):
+            self.ui.state.setStyleSheet('''color : #fcbe03;
+                font-size: 12px;
+                font-family:"Comic Sans MS", cursive, sans-serif;''')
+            self.ui.state.setText("Layer is hidden — unhide it to paint")
+            self.time_counting = True
+            self.startTime()
+            return False
+        return True
 
     def status_1(self):
         self.ui.state.clear()
-        self.ui.state.setStyleSheet('''color : #98fc03;
+        self.ui.state.setStyleSheet(f'''color : {ACCENT_COLOR};
             font-size: 12px;
             font-family:"Comic Sans MS", cursive, sans-serif;''')
 
