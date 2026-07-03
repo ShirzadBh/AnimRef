@@ -1,43 +1,68 @@
-## AnimRef - Sequence Loader For 3Ds Max
-
+# AnimRef v1.0 — Sequence Loader for 3ds Max
 
 ![AnimRef User-Interface](screen/interface.jpg)
 
----
-
-With AnimRef you can load and play image sequences directly in the 3Ds Max user-interface. There are a few parameters to keep it simple and fast for animators:
+AnimRef lets you load, play, and draw on image sequences directly inside 3ds Max — synced to the timeline.
 
 ---
-### AnimRef
-- Video to Sequence Converter:
-![](screen/converter.gif)
-- Viewer Update  
-- New UI design
-- MessageBox Timer
-- Load image sequences in the desired range
-- Time shift value
-- 3Ds Max synced time slider
-- Window opacity slider
+
+## Features
+
+- Load and play image sequences synced to the 3ds Max time slider
+- Multi-layer drawing with opacity, eraser, undo/redo
+- Ghost onion-skinning (forward and backward frames)
+- Video-to-sequence converter (downloaded on demand)
+- Export drawings per frame as PNG
+- Time shift for offsetting the sequence relative to the timeline
+- Adjustable window opacity
+
 ---
 
-| Supported Formats | Description |
-| ----------- | ----------- |
-| BMP | Windows Bitmap |
-| JPG | Joint Photographic Experts Group |
-| JPEG | Joint Photographic Experts Group |
-| PNG | Portable Network Graphics |
+## Supported Formats
 
+| Format | Description |
+|--------|-------------|
+| BMP    | Windows Bitmap |
+| JPG / JPEG | Joint Photographic Experts Group |
+| PNG    | Portable Network Graphics |
 
->Easy installation: 
-	Run "One-Click Installation.bat".
-	
->installation: 
-	Unzip the "AnimRef.zip" inside "C://ProgramData//Autodesk//ApplicationPlugins".
+---
 
-	
->How To Run: 
-	Now, it's a MacroScript, which you can assign a shortcut to it or search it using "X" in 3Ds Max.
-	
->Supported Version:
+## Installation
 
-    2028
+### Option 1 — One-Click Installer (Recommended)
+
+1. Download and extract the release ZIP so that `AnimRef.zip` and `One-Click Installation.bat` are in the **same folder**
+2. **Right-click** `One-Click Installation.bat` → **Run as Administrator**
+3. Press any key when prompted — the plugin installs automatically
+
+### Option 2 — Manual
+
+1. Extract `AnimRef.zip` into:
+   ```
+   C:\ProgramData\Autodesk\ApplicationPlugins\
+   ```
+   The result should be:
+   ```
+   C:\ProgramData\Autodesk\ApplicationPlugins\AnimRef\PackageContents.xml
+   ```
+2. Restart 3ds Max
+
+---
+
+## How to Launch
+
+1. Open **3ds Max** (2025, 2026, 2027, or 2028)
+2. Press **X** to open the search bar, type **AnimRef**
+3. Click the result — or go to **Customize → Customize User Interface** to assign a keyboard shortcut
+
+---
+
+## Supported Versions
+
+| 3ds Max Version | Status |
+|-----------------|--------|
+| 2025            | ✅ Supported |
+| 2026            | ✅ Supported |
+| 2027            | ✅ Supported |
+| 2028            | ✅ Supported |

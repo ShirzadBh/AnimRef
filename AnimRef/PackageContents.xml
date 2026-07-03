@@ -4,14 +4,14 @@
     AutodeskProduct="3ds Max"
     ProductType="Application"
     Name="AnimRef"
-	Description="Sequence Player For 3Ds Max"
-    AppVersion="2.0"
-	Author="Sherzad Bahrami"
+    Description="Sequence Player For 3ds Max"
+    AppVersion="1.0"
+    Author="Shirzad Bahrami"
     ProductCode="{79A24A20-FE5C-45FB-8E3F-6F70DEBF5F21}"
     UpgradeCode="{21cf731f-17fb-40d2-93f9-4f78bc29acc5}">
     <CompanyDetails Email="cgcenter.org@gmail.com" Name="CGcenter" Url="https://shirzadbahrami.com/" />
-        <Components Description="post-start-up scripts parts">
-        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2028" SeriesMax="2028" />
-        <ComponentEntry AppName="AnimRef" Version="2.0" ModuleName="./Contents/2028.ms" />
+    <Components Description="AnimRef startup macro (3ds Max 2025-2028)">
+        <RuntimeRequirements OS="Win64" Platform="3ds Max" SeriesMin="2025" SeriesMax="2028" />
+        <ComponentEntry AppName="AnimRef" Version="1.0" ModuleName="./Contents/animref.ms" />
     </Components>
 </ApplicationPackage>

@@ -954,7 +954,7 @@ class AnimRef(QDockWidget):
             parent.addDockWidget(QtCore.Qt.RightDockWidgetArea, self)
         self.setFloating(True)
         self.resize(1860, 1280)
-        self.setWindowTitle("AnimRef Pro v1")
+        self.setWindowTitle("AnimRef v1.0")
 
         self.defineVariables()
         self.defineSignals()
@@ -973,7 +973,7 @@ class AnimRef(QDockWidget):
         self._thumbnail_update_timer.start()
 
     def downloadConverter(self):
-        converter_dir = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter')
+        converter_dir = os.path.join(self.dir, 'AnimRef', 'Contents', 'converter')
         converter_path = os.path.join(converter_dir, 'video_to_sequence.exe')
         download_path = "https://raw.githubusercontent.com/ShirzadBh/AnimRef/main/AnimRef/Contents/converter/video_to_sequence.exe"
 
@@ -1069,7 +1069,7 @@ class AnimRef(QDockWidget):
                                             self.progress.emit(int(downloaded / total_size * 100))
                             self.finished.emit(True, "")
                             return
-                    except (urllib.error.URLError, ConnectionResetError, TimeoutError, requests.exceptions.RequestException) as e:
+                    except (urllib.error.URLError, ConnectionResetError, TimeoutError, OSError) as e:
                         if attempt < max_retries - 1:
                             # Wait before retry (exponential backoff)
                             self.msleep(2000 * (2 ** attempt))
@@ -1092,7 +1092,7 @@ class AnimRef(QDockWidget):
         progress.close()
         if success:
             # Verify the file was actually downloaded
-            converter_dir = os.path.join(self.dir, 'ApplicationPlugins', 'AnimRef', 'Contents', 'converter')
+            converter_dir = os.path.join(self.dir, 'AnimRef', 'Contents', 'converter')
             converter_path = os.path.join(converter_dir, 'video_to_sequence.exe')
             if os.path.exists(converter_path):
                 self.ui.state.setStyleSheet(f'''color : {ACCENT_COLOR};
@@ -1122,9 +1122,7 @@ class AnimRef(QDockWidget):
         path = os.path.join(self.dir, 'AnimRef', 'Contents', 'converter', 'video_to_sequence.exe')
         converterPath = os.path.join(self.dir, 'AnimRef', 'Contents', 'converter')
 
-        # Debug: Check if file exists
         if not os.path.exists(path):
-            # File doesn't exist, show download dialog
             dlg = QtWidgets.QDialog(self)
             dlg.setWindowTitle("Sequence Converter")
             dlg.setMinimumWidth(360)
@@ -1178,10 +1176,7 @@ class AnimRef(QDockWidget):
 
         self.dir = mxs.getDir(mxs.name('publicExchangeStoreInstallPath'))
         loader = QUiLoader()
-        if DEV:
-            ui_file_path = r"C:\Users\cgcen\Documents\GitHub\AnimRef\AnimRef\Contents\interface\interface.ui"
-        else:
-            ui_file_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'interface', 'interface.ui')
+        ui_file_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'interface', 'interface.ui')
         ui_file = QFile(ui_file_path)
         ui_file.open(QFile.ReadOnly)
         self.ui = loader.load(ui_file, self)
@@ -1369,10 +1364,7 @@ class AnimRef(QDockWidget):
         self.images_path = None
         self.last_frame = 0
         self.previous_frame = 0
-        if DEV:
-            no_data_path = r"C:\Users\cgcen\Documents\GitHub\AnimRef\AnimRef\Contents\icons\no_data.png"
-        else:
-            no_data_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'no_data.png')
+        no_data_path = os.path.join(self.dir, 'AnimRef', 'Contents', 'icons', 'no_data.png')
         self.no_image = QtGui.QPixmap(no_data_path)
         self.drawing = False
         self._tablet_drawing = False
@@ -1660,10 +1652,7 @@ class AnimRef(QDockWidget):
         self._regenerateCursorPixmap()
 
     def defineIcons(self):
-        if DEV:
-            icons_dir = r"C:\Users\cgcen\Documents\GitHub\AnimRef\AnimRef\Contents\icons"
-        else:
-            icons_dir = os.path.join(self.dir, 'AnimRef', 'Contents', 'icons')
+        icons_dir = os.path.join(self.dir, 'AnimRef', 'Contents', 'icons')
         self.icon = QtGui.QIcon(os.path.join(icons_dir, 'icon.png'))
         self.play_icon = QtGui.QIcon(os.path.join(icons_dir, 'play.png'))
         self.n_frame_icon = QtGui.QIcon(os.path.join(icons_dir, 'n_frame.png'))
@@ -2521,14 +2510,9 @@ class AnimRef(QDockWidget):
         self.startTime()
 
 
-DEV = True
-
 import __main__
 
 def main():
-    if DEV:
-        AnimRef().show()
-        return
     instance = getattr(__main__, '_animref_instance', None)
     try:
         if instance is not None:
